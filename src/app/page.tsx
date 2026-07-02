@@ -11,6 +11,7 @@ import { ActivityTimelinePanel } from "@/components/activity-timeline-panel";
 import { HermesAgentsPanel } from "@/components/hermes-agents-panel";
 import { HermesApprovalPanel } from "@/components/hermes-approval-panel";
 import { OpenCodePanel } from "@/components/opencode-panel";
+import { ModelQuickSwap } from "@/components/model-quick-swap";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +88,10 @@ export default async function DashboardPage() {
 
         {/* ── Right: Health + Activity sidebar ── */}
         <div className="space-y-6 lg:col-span-4">
+          <SectionErrorBoundary label="LLM Models">
+            <ModelQuickSwap />
+          </SectionErrorBoundary>
+
           <SectionErrorBoundary label="System Health">
             <SystemHealthPanel />
           </SectionErrorBoundary>
