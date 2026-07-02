@@ -1,7 +1,5 @@
-import { Suspense } from "react";
 import { getDashboardData } from "@/lib/data";
 import { computeCiRollup } from "@/lib/ci";
-import { SkeletonCard } from "@/components/skeleton-card";
 import { ExecutiveBriefing } from "@/components/executive-briefing";
 import { RefreshBar } from "@/components/refresh-bar";
 import { DashboardStatCards } from "@/components/dashboard-stat-cards";
@@ -10,6 +8,8 @@ import { DashboardApprovalPanel } from "@/components/dashboard-approval-panel";
 import { DashboardMissionsPanel } from "@/components/dashboard-missions-panel";
 import { SystemHealthPanel } from "@/components/system-health-panel";
 import { ActivityTimelinePanel } from "@/components/activity-timeline-panel";
+import { HermesAgentsPanel } from "@/components/hermes-agents-panel";
+import { OpenCodePanel } from "@/components/opencode-panel";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 export const dynamic = "force-dynamic";
@@ -87,15 +87,19 @@ export default async function DashboardPage() {
         {/* ── Right: Health + Activity sidebar ── */}
         <div className="space-y-6 lg:col-span-4">
           <SectionErrorBoundary label="System Health">
-            <Suspense fallback={<SkeletonCard lines={6} />}>
-              <SystemHealthPanel />
-            </Suspense>
+            <SystemHealthPanel />
           </SectionErrorBoundary>
 
           <SectionErrorBoundary label="Recent Activity">
-            <Suspense fallback={<SkeletonCard lines={6} />}>
-              <ActivityTimelinePanel />
-            </Suspense>
+            <ActivityTimelinePanel />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Hermes Agent">
+            <HermesAgentsPanel />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="OpenCode">
+            <OpenCodePanel />
           </SectionErrorBoundary>
         </div>
       </div>

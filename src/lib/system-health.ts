@@ -165,6 +165,93 @@ async function checkGitHub(): Promise<ServiceHealth> {
   }
 }
 
+async function checkHermes(): Promise<ServiceHealth> {
+  const url = process.env.HERMES_URL ?? "http://localhost:8642";
+  const start = Date.now();
+  try {
+    const headers: Record<string, string> = {};
+    const apiKey = process.env.HERMES_API_KEY;
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+    const res = await fetch(`${url}/v1/capabilities`, {
+      headers,
+      signal: AbortSignal.timeout(5_000),
+    });
+    const latencyMs = Date.now() - start;
+    if (!res.ok) {
+      return {
+        id: "hermes",
+        name: "Hermes Agent",
+        icon: "Brain",
+        status: "degraded",
+        latencyMs,
+        detail: `HTTP ${res.status}`,
+      };
+    }
+    const data = (await res.json()) as {
+      capabilities?: unknown[];
+    };
+    const capCount = Array.isArray(data.capabilities)
+      ? data.capabilities.length
+      : 0;
+    return {
+      id: "hermes",
+      name: "Hermes Agent",
+      icon: "Brain",
+      status: "healthy",
+      latencyMs,
+      detail: capCount > 0
+        ? `${capCount} capabilities`
+        : "API server online",
+    };
+  } catch {
+    return {
+      id: "hermes",
+      name: "Hermes Agent",
+      icon: "Brain",
+      status: "down",
+      latencyMs: null,
+      detail: `Unreachable at ${url}`,
+    };
+  }
+}
+
+async function checkOpenCode(): Promise<ServiceHealth> {
+  const storagePath = process.env.OPENCODE_STORAGE_PATH ??
+    `${process.env.HOME ?? "/root"}/.local/share/opencode`;
+  const start = Date.now();
+  try {
+    // Quick check: does the storage directory exist and is it readable?
+    const { stdout } = await execFileP(
+      "ls",
+      [storagePath],
+      { timeout: 3_000 },
+    );
+    const latencyMs = Date.now() - start;
+    const entries = stdout.trim().split("\n").filter(Boolean);
+    const projects = entries.length;
+    return {
+      id: "opencode",
+      name: "OpenCode",
+      icon: "Terminal",
+      status: "healthy",
+      latencyMs,
+      detail: projects > 0
+        ? `${projects} item${projects !== 1 ? "s" : ""} in storage`
+        : "Storage accessible",
+    };
+  } catch {
+    return {
+      id: "opencode",
+      name: "OpenCode",
+      icon: "Terminal",
+      status: "down",
+      latencyMs: null,
+      detail: `Storage not found at ${storagePath}`,
+    };
+  }
+}
+
 async function checkFMRepo(): Promise<ServiceHealth> {
   const repo = process.env.FM_REPO_PATH ?? "/opt/flowmanner";
   const start = Date.now();
@@ -232,6 +319,8 @@ export async function getSystemHealth(): Promise<ServiceHealth[]> {
     checkHomelabLLM(),
     checkModelManager(),
     checkGitHub(),
+    checkHermes(),
+    checkOpenCode(),
     checkFMRepo(),
   ]);
 

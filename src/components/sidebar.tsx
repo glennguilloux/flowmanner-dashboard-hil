@@ -18,6 +18,9 @@ import { ModelSwapChip } from "@/components/model-swap-chip";
 import { ModelSwapPanel } from "@/components/model-swap-panel";
 import { WgWatchdogChip } from "@/components/wg-watchdog-chip";
 import { WgWatchdogPanel } from "@/components/wg-watchdog-panel";
+import { HermesChip } from "@/components/hermes-chip";
+import { HermesPanel } from "@/components/hermes-panel";
+import { OpenCodeChip } from "@/components/opencode-chip";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SessionRitualChip } from "@/components/session-ritual-chip";
 
@@ -35,6 +38,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const [modelPanelOpen, setModelPanelOpen] = useState(false);
   const [wgPanelOpen, setWgPanelOpen] = useState(false);
+  const [hermesPanelOpen, setHermesPanelOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close mobile drawer on navigation.
@@ -96,6 +100,8 @@ export function Sidebar() {
         </div>
         <SessionRitualChip />
         <WgWatchdogChip onOpenPanel={() => setWgPanelOpen(true)} />
+        <HermesChip onOpenPanel={() => setHermesPanelOpen(true)} />
+        <OpenCodeChip />
         <ModelSwapChip onOpenPanel={() => setModelPanelOpen(true)} />
         <ThemeToggle />
       </div>
@@ -156,6 +162,10 @@ export function Sidebar() {
       <WgWatchdogPanel
         open={wgPanelOpen}
         onClose={() => setWgPanelOpen(false)}
+      />
+      <HermesPanel
+        open={hermesPanelOpen}
+        onClose={() => setHermesPanelOpen(false)}
       />
     </>
   );
