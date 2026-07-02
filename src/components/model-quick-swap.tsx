@@ -45,7 +45,7 @@ export function ModelQuickSwap() {
       const res = await apiFetch("/api/models", { cache: "no-store" });
       const data = (await res.json()) as ModelsResponse;
       if (data.ok) {
-        setModels(data.models ?? []);
+        setModels(Array.isArray(data.models) ? data.models : []);
         setActiveId(data.status?.current_model ?? null);
         setError(null);
       } else {

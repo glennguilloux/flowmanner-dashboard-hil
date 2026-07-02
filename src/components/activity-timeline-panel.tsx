@@ -77,7 +77,15 @@ function TypeBadge({ type }: { type: TimelineEventType }) {
       cls: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400",
     },
   };
-  const { label, cls } = config[type];
+  const entry = config[type];
+  if (!entry) {
+    return (
+      <span className="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+        {type.replace(/_/g, " ")}
+      </span>
+    );
+  }
+  const { label, cls } = entry;
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${cls}`}
