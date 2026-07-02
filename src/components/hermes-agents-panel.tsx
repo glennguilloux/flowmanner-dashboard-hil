@@ -1,6 +1,4 @@
 "use client";
-
-import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Brain,
   CheckCircle2,
@@ -14,8 +12,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { relativeTime } from "@/lib/relative-time";
-
-const REFRESH_INTERVAL_S = 30;
+import { usePolling } from "@/hooks/use-polling";
 
 // ── Types (mirrored from hermes-acp.ts for client-safe usage) ─────────────
 
@@ -184,47 +181,9 @@ function ToolChip({ tool }: { tool: HermesTool }) {
 // ── Main component ────────────────────────────────────────────────────────
 
 export function HermesAgentsPanel() {
-  const [data, setData] = useState<HermesData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(REFRESH_INTERVAL_S);
-  const secondsRef = useRef(REFRESH_INTERVAL_S);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/hermes", {
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (res.ok) {
-        const d = (await res.json()) as HermesData;
-        setData(d);
-      }
-    } catch {
-      // Keep previous data on fetch failure
-    } finally {
-      setLoading(false);
-      secondsRef.current = REFRESH_INTERVAL_S;
-      setSecondsLeft(REFRESH_INTERVAL_S);
-    }
-  }, []);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    fetchData();
-
-    const interval = setInterval(() => {
-      secondsRef.current -= 1;
-      if (secondsRef.current <= 0) {
-        fetchData();
-      } else {
-         
-        setSecondsLeft(secondsRef.current);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [fetchData]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const { data, loading, secondsLeft, refresh } = usePolling<HermesData>(
+    "/api/hermes",
+  );
 
   // Loading skeleton on first fetch
   if (!data && loading) {
@@ -316,7 +275,7 @@ export function HermesAgentsPanel() {
           </span>
           <button
             type="button"
-            onClick={fetchData}
+            onClick={refresh}
             disabled={loading}
             className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-300"
             aria-label="Refresh Hermes data"

@@ -1,6 +1,4 @@
 "use client";
-
-import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Terminal,
   FolderOpen,
@@ -12,8 +10,7 @@ import {
   Hash,
 } from "lucide-react";
 import { relativeTime } from "@/lib/relative-time";
-
-const REFRESH_INTERVAL_S = 30;
+import { usePolling } from "@/hooks/use-polling";
 
 // ── Types (mirrored from opencode.ts for client-safe usage) ───────────────
 
@@ -129,47 +126,9 @@ function ProjectCard({ p }: { p: OpenCodeProject }) {
 // ── Main component ────────────────────────────────────────────────────────
 
 export function OpenCodePanel() {
-  const [data, setData] = useState<OpenCodeData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(REFRESH_INTERVAL_S);
-  const secondsRef = useRef(REFRESH_INTERVAL_S);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/opencode", {
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (res.ok) {
-        const d = (await res.json()) as OpenCodeData;
-        setData(d);
-      }
-    } catch {
-      // Keep previous data on fetch failure
-    } finally {
-      setLoading(false);
-      secondsRef.current = REFRESH_INTERVAL_S;
-      setSecondsLeft(REFRESH_INTERVAL_S);
-    }
-  }, []);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    fetchData();
-
-    const interval = setInterval(() => {
-      secondsRef.current -= 1;
-      if (secondsRef.current <= 0) {
-        fetchData();
-      } else {
-         
-        setSecondsLeft(secondsRef.current);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [fetchData]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const { data, loading, secondsLeft, refresh } = usePolling<OpenCodeData>(
+    "/api/opencode",
+  );
 
   // Loading skeleton
   if (!data && loading) {
@@ -251,7 +210,7 @@ export function OpenCodePanel() {
           </span>
           <button
             type="button"
-            onClick={fetchData}
+            onClick={refresh}
             disabled={loading}
             className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-300"
             aria-label="Refresh OpenCode data"
