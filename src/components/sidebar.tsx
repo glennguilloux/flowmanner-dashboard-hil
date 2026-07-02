@@ -89,6 +89,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-slate-100 p-4 space-y-3 dark:border-slate-800">
+        <ModelSwapChip onOpenPanel={() => setModelPanelOpen(true)} />
         <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-slate-800">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm">
             👤
@@ -102,7 +103,6 @@ export function Sidebar() {
         <WgWatchdogChip onOpenPanel={() => setWgPanelOpen(true)} />
         <HermesChip onOpenPanel={() => setHermesPanelOpen(true)} />
         <OpenCodeChip />
-        <ModelSwapChip onOpenPanel={() => setModelPanelOpen(true)} />
         <ThemeToggle />
       </div>
     </>
