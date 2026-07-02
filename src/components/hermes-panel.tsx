@@ -12,11 +12,11 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
-  Clock,
   Loader2,
-  XCircle,
 } from "lucide-react";
 import { relativeTime } from "@/lib/relative-time";
+import { HermesResolvedList } from "@/components/hermes-resolved-list";
+import type { HermesApproval } from "@/types/hermes";
 
 // ── Types (mirrored from hermes-acp.ts to avoid importing server code) ───
 
@@ -46,16 +46,6 @@ type HermesSkill = {
 type HermesTool = {
   name: string;
   description: string;
-};
-
-type HermesApproval = {
-  id: string;
-  action: string;
-  reason?: string;
-  tool?: string;
-  status: "pending" | "approved" | "denied" | "expired";
-  scope?: string;
-  created_at: string;
 };
 
 type HermesData = {
@@ -585,33 +575,7 @@ function ApprovalsTab({ approvals }: { approvals: HermesApproval[] }) {
       )}
 
       {resolved.length > 0 && (
-        <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Recently Resolved ({resolved.length})
-          </h3>
-          <div className="space-y-1.5">
-            {resolved.slice(0, 10).map((a) => (
-              <div
-                key={a.id}
-                className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/50"
-              >
-                {a.status === "approved" ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                ) : (
-                  <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
-                )}
-                <p className="truncate text-xs text-slate-700 dark:text-slate-300">
-                  {a.action}
-                </p>
-                {a.scope && (
-                  <span className="ml-auto shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:bg-slate-700">
-                    {a.scope}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <HermesResolvedList approvals={resolved} initialLimit={10} />
       )}
     </div>
   );

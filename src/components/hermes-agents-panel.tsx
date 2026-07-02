@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { relativeTime } from "@/lib/relative-time";
 import { usePolling } from "@/hooks/use-polling";
+import type { HermesApproval } from "@/types/hermes";
 
 // ── Types (mirrored from hermes-acp.ts for client-safe usage) ─────────────
 
@@ -48,16 +49,6 @@ type HermesCapability = {
   name: string;
   supported: boolean;
   description?: string;
-};
-
-type HermesApproval = {
-  id: string;
-  action: string;
-  reason?: string;
-  tool?: string;
-  status: "pending" | "approved" | "denied" | "expired";
-  scope?: string;
-  created_at: string;
 };
 
 type HermesData = {

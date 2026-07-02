@@ -10,12 +10,17 @@ export default function KanbanPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="space-y-1">
-        <h1 className="text-3xl font-semibold text-slate-950 dark:text-slate-50">
-          Kanban Board
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-semibold text-slate-950 dark:text-slate-50">
+            Kanban Board
+          </h1>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            Read-only
+          </span>
+        </div>
         <p className="text-slate-600 dark:text-slate-400">
           Local tasks from <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 text-xs">.hermes/kanban/board.json</code>{" "}
-          — read-only snapshot of your task pipeline.
+          — edits happen in FlowManner (<code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 text-xs">/opt/flowmanner/.hermes/kanban/</code>).
         </p>
       </header>
 

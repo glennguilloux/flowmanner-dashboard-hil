@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 // Idempotency guard: if an identical approval was created within the last
 // 5 seconds, return the existing result instead of re-running gh commands.
 // This prevents double-trigger from rapid button clicks.
-const IDEMPOTENCY_WINDOW_MS = 5_000;
+const IDEMPOTENCY_WINDOW_MS = 10_000;
 
 export async function POST(
   request: NextRequest,
@@ -71,6 +71,7 @@ export async function POST(
   if (recentApproval) {
     return NextResponse.json({
       ok: true,
+      idempotent: true,
       status: tactic.status,
       message: "Duplicate request — already processed",
     });

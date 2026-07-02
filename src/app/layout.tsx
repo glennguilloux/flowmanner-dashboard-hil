@@ -13,13 +13,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* Blocking script to apply dark class before paint — prevents flash of
-          wrong theme on load. Reads localStorage, falls back to system pref. */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `!function(){try{var t=localStorage.getItem("theme");if(t==="dark"||!t&&matchMedia("(prefers-color-scheme:dark)").matches)document.documentElement.classList.add("dark");else document.documentElement.classList.remove("dark")}catch(e){}}()`,
-        }}
-      />
+      <head>
+        {/* Blocking script to apply dark class before paint — prevents flash of
+            wrong theme on load. Reads localStorage, falls back to system pref. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `!function(){try{var t=localStorage.getItem("theme");if(t==="dark"||!t&&matchMedia("(prefers-color-scheme:dark)").matches)document.documentElement.classList.add("dark");else document.documentElement.classList.remove("dark")}catch(e){}}()`,
+          }}
+        />
+      </head>
       <body className="bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-200">
         <div className="flex min-h-screen">
           <Sidebar />

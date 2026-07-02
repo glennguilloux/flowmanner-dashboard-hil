@@ -15,24 +15,10 @@ import {
   Loader2,
   Terminal,
 } from "lucide-react";
+import type { HermesApproval } from "@/types/hermes";
+import { HermesResolvedList } from "@/components/hermes-resolved-list";
 
-// ── Types (mirrored from hermes-acp.ts for client-safe usage) ─────────────
-
-type HermesApproval = {
-  id: string;
-  session_id?: string;
-  job_id?: string;
-  action: string;
-  reason?: string;
-  tool?: string;
-  status: "pending" | "approved" | "denied" | "expired";
-  scope?: string;
-  decided_by?: string;
-  notes?: string;
-  created_at: string;
-  updated_at?: string;
-  timeout_seconds?: number | null;
-};
+// ── Types ─────────────────────────────────────────────────────────────────
 
 type HermesApprovalData = {
   ok: boolean;
@@ -158,7 +144,7 @@ export function HermesApprovalPanel() {
 
       {/* Recently resolved */}
       {resolved.length > 0 && (
-        <ResolvedList approvals={resolved} />
+        <HermesResolvedList approvals={resolved} />
       )}
     </section>
   );
@@ -362,69 +348,4 @@ function ApprovalCard({
   );
 }
 
-// ── Resolved approvals list ───────────────────────────────────────────────
-
-function ResolvedList({ approvals }: { approvals: HermesApproval[] }) {
-  const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? approvals : approvals.slice(0, 5);
-
-  return (
-    <div className="mt-4">
-      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        <Clock className="h-3 w-3 text-slate-400" />
-        Recently Resolved ({approvals.length})
-      </h3>
-      <div className="space-y-1.5">
-        {visible.map((a) => (
-          <div
-            key={a.id}
-            className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/50"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                {a.status === "approved" ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                ) : a.status === "denied" ? (
-                  <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
-                ) : (
-                  <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                )}
-                <p className="truncate text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {a.action}
-                </p>
-              </div>
-              {a.notes && (
-                <p className="ml-5 truncate text-[11px] text-slate-500">
-                  {a.notes}
-                </p>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {a.scope && (
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-500 dark:bg-slate-700 dark:text-slate-400">
-                  {a.scope}
-                </span>
-              )}
-              <time
-                className="text-[10px] text-slate-400"
-                dateTime={new Date(a.updated_at ?? a.created_at).toISOString()}
-                title={new Date(a.updated_at ?? a.created_at).toLocaleString()}
-              >
-                {relativeTime(a.updated_at ?? a.created_at)}
-              </time>
-            </div>
-          </div>
-        ))}
-      </div>
-      {approvals.length > 5 && (
-        <button
-          type="button"
-          onClick={() => setShowAll(!showAll)}
-          className="mt-2 text-xs font-medium text-indigo-600 hover:text-indigo-700"
-        >
-          {showAll ? "Show fewer" : `Show all ${approvals.length}`}
-        </button>
-      )}
-    </div>
-  );
-}
+// Resolved list is now shared — see HermesResolvedList in @/components/hermes-resolved-list
