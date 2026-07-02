@@ -12,12 +12,15 @@ import { HermesAgentsPanel } from "@/components/hermes-agents-panel";
 import { HermesApprovalPanel } from "@/components/hermes-approval-panel";
 import { OpenCodePanel } from "@/components/opencode-panel";
 import { ModelQuickSwap } from "@/components/model-quick-swap";
+import { GoalsPanel } from "@/components/goals-panel";
+import { BrainDumpPanel } from "@/components/brain-dump-panel";
+import { DecisionLogPanel } from "@/components/decision-log-panel";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes } =
+  const { prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes, activeGoals, brainDumpEntries, brainDumpPending, recentDecisions } =
     await getDashboardData();
 
   const prTactics = prRows.map((t) => ({
@@ -90,6 +93,18 @@ export default async function DashboardPage() {
         <div className="space-y-6 lg:col-span-4">
           <SectionErrorBoundary label="LLM Models">
             <ModelQuickSwap />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Goals">
+            <GoalsPanel goals={activeGoals} />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Brain Dump">
+            <BrainDumpPanel entries={brainDumpEntries} pendingCount={brainDumpPending} />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Decisions">
+            <DecisionLogPanel decisions={recentDecisions} />
           </SectionErrorBoundary>
 
           <SectionErrorBoundary label="System Health">

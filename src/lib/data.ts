@@ -10,6 +10,9 @@ import {
 import { eq, ne, desc, and, isNotNull } from "drizzle-orm";
 import { countInbox, countMissions, getMissions } from "@/lib/inbox";
 import { getMissionHealth } from "@/lib/missions";
+import { getActiveGoals } from "@/lib/goals";
+import { getPendingBrainDumpEntries, countPendingBrainDump } from "@/lib/brain-dump";
+import { getRecentDecisions } from "@/lib/decisions";
 
 export async function getDefaultUser() {
   return db.query.users.findFirst({
@@ -184,8 +187,12 @@ export async function getDashboardData(): Promise<{
   missionList: Awaited<ReturnType<typeof getMissions>>;
   missionHealth: Awaited<ReturnType<typeof getMissionHealth>>;
   syncTimes: Awaited<ReturnType<typeof getLastSyncTimes>>;
+  activeGoals: Awaited<ReturnType<typeof getActiveGoals>>;
+  brainDumpEntries: Awaited<ReturnType<typeof getPendingBrainDumpEntries>>;
+  brainDumpPending: Awaited<ReturnType<typeof countPendingBrainDump>>;
+  recentDecisions: Awaited<ReturnType<typeof getRecentDecisions>>;
 }> {
-  const [prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes] =
+  const [prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes, activeGoals, brainDumpEntries, brainDumpPending, recentDecisions] =
     await Promise.all([
       getTactics({ source: "pr" }),
       getTactics({ status: "needs_review" }),
@@ -195,6 +202,10 @@ export async function getDashboardData(): Promise<{
       getMissionHealth(),
       getTactics({ excludeStatus: "needs_review", humanDecisionIsNotNull: true }),
       getLastSyncTimes(),
+      getActiveGoals(),
+      getPendingBrainDumpEntries(),
+      countPendingBrainDump(),
+      getRecentDecisions(),
     ]);
   return {
     prRows,
@@ -205,5 +216,9 @@ export async function getDashboardData(): Promise<{
     missionHealth,
     resolvedTactics,
     syncTimes,
+    activeGoals,
+    brainDumpEntries,
+    brainDumpPending,
+    recentDecisions,
   };
 }

@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Target,
+  Flag,
+  Lightbulb,
+  Scale,
   ListChecks,
   LayoutGrid,
   Bot,
@@ -26,6 +29,9 @@ import { SessionRitualChip } from "@/components/session-ritual-chip";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/goals", label: "Goals", icon: Flag },
+  { href: "/brain-dump", label: "Brain Dump", icon: Lightbulb },
+  { href: "/decisions", label: "Decisions", icon: Scale },
   { href: "/strategies", label: "Strategies", icon: Target },
   { href: "/tactics", label: "Tactics", icon: ListChecks },
   { href: "/kanban", label: "Kanban", icon: LayoutGrid },

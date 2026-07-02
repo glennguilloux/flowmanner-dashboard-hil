@@ -12,7 +12,12 @@ export type TimelineEventType =
   | "rejection"
   | "tactic_completed"
   | "tactic_needs_review"
-  | "mission_event";
+  | "mission_event"
+  | "brain_dump_triaged"
+  | "goal_completed"
+  | "decision_requested";
+
+type IconType = "check" | "x" | "clock" | "activity" | "shield" | "lightbulb" | "target" | "scale";
 
 export type TimelineEvent = {
   id: string;
@@ -23,10 +28,64 @@ export type TimelineEvent = {
   /** Relative link for the event (e.g. /tactics/{id}). */
   href: string;
   /** Icon name — mapped in the component. */
-  icon: "check" | "x" | "clock" | "activity" | "shield";
+  icon: IconType;
 };
 
 // ── Fetchers ───────────────────────────────────────────────────────────────
+
+// Extended event types for Phase 3: brain dump triage, goal completion,
+// and decision requests extend the base timeline without new tables.
+
+async function getRecentBrainDumpTriaged(limit: number): Promise<TimelineEvent[]> {
+  const { brainDump } = await import("@/db/schema");
+  const rows = await db
+    .select({
+      id: brainDump.id,
+      content: brainDump.content,
+      status: brainDump.status,
+      triageSummary: brainDump.triageSummary,
+      updatedAt: brainDump.updatedAt,
+    })
+    .from(brainDump)
+    .where(sql`${brainDump.status} IN ('triaged', 'converted', 'dismissed')`)
+    .orderBy(desc(brainDump.updatedAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: `braindump-${r.id}`,
+    type: "brain_dump_triaged" as const,
+    title: `Brain dump triaged: ${r.content.slice(0, 60)}${r.content.length > 60 ? "…" : ""}`,
+    description: r.triageSummary ?? `Status: ${r.status}`,
+    timestamp: new Date(r.updatedAt),
+    href: "/brain-dump",
+    icon: "lightbulb" as const,
+  }));
+}
+
+async function getRecentGoalCompleted(limit: number): Promise<TimelineEvent[]> {
+  const { goals } = await import("@/db/schema");
+  const rows = await db
+    .select({
+      id: goals.id,
+      title: goals.title,
+      status: goals.status,
+      updatedAt: goals.updatedAt,
+    })
+    .from(goals)
+    .where(eq(goals.status, "completed"))
+    .orderBy(desc(goals.updatedAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: `goal-${r.id}`,
+    type: "goal_completed" as const,
+    title: `Goal completed: ${r.title}`,
+    description: "Strategic objective reached",
+    timestamp: new Date(r.updatedAt),
+    href: `/goals/${r.id}`,
+    icon: "target" as const,
+  }));
+}
 
 type ApprovalRow = {
   id: string;
@@ -149,14 +208,16 @@ async function getRecentMissionEvents(limit: number): Promise<TimelineEvent[]> {
 export async function getRecentActivity(
   limit = 15,
 ): Promise<TimelineEvent[]> {
-  const [approvals, tacticUpdates, missionEvents] = await Promise.all([
+  const [approvals, tacticUpdates, missionEvents, brainDumpTriaged, goalCompleted] = await Promise.all([
     getRecentApprovals(8),
     getRecentTacticUpdates(10),
     getRecentMissionEvents(8),
+    getRecentBrainDumpTriaged(5),
+    getRecentGoalCompleted(5),
   ]);
 
   // Merge, sort descending by timestamp, take the top N.
-  const all = [...approvals, ...tacticUpdates, ...missionEvents];
+  const all = [...approvals, ...tacticUpdates, ...missionEvents, ...brainDumpTriaged, ...goalCompleted];
   all.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   return all.slice(0, limit);
 }

@@ -6,6 +6,9 @@ import {
   tactics,
   messages,
   approvals,
+  goals,
+  projects,
+  brainDump,
 } from "@/db/schema";
 
 // Demo seed. All agents point at homelab LLM models (no SaaS) — this is the
@@ -208,7 +211,168 @@ export async function seedDatabase() {
     decidedBy: defaultUser.id,
   });
 
-  return { strategy, tactics: [tactic1, tactic2, tactic3] };
+  // ── Goals & Projects ────────────────────────────────────────────────────
+
+  const [longTermGoal] = await db
+    .insert(goals)
+    .values({
+      title: "Ship FlowManner v2",
+      description:
+        "Complete the full v2 release with improved agent orchestration, real-time CI, and human-in-the-loop gates.",
+      type: "long-term",
+      category: "schedule",
+      status: "active",
+      timeframe: "Q3 2026",
+      progress: 35,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  const [milestone1] = await db
+    .insert(goals)
+    .values({
+      title: "Complete auth & middleware",
+      description: "Ship the auth middleware, bearer token, and dev-mode bypass.",
+      type: "medium-term",
+      category: "do",
+      status: "active",
+      timeframe: "2026-07-15",
+      parentGoalId: longTermGoal?.id ?? null,
+      progress: 80,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  const [milestone2] = await db
+    .insert(goals)
+    .values({
+      title: "Launch beta program",
+      description: "Open the dashboard to 5 beta users for feedback.",
+      type: "medium-term",
+      category: "schedule",
+      status: "active",
+      timeframe: "2026-08-01",
+      parentGoalId: longTermGoal?.id ?? null,
+      progress: 10,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  const [mediumGoal] = await db
+    .insert(goals)
+    .values({
+      title: "Reach 100 daily active users",
+      description: "Grow the user base through content marketing and word-of-mouth.",
+      type: "medium-term",
+      category: "delegate",
+      status: "active",
+      timeframe: "Q4 2026",
+      progress: 5,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  const [completedGoal] = await db
+    .insert(goals)
+    .values({
+      title: "Set up homelab infrastructure",
+      description: "Deploy WireGuard, Postgres, llama.cpp, and the model manager daemon.",
+      type: "medium-term",
+      category: "do",
+      status: "completed",
+      timeframe: "Q2 2026",
+      progress: 100,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  // Projects
+  if (longTermGoal) {
+    await db
+      .insert(projects)
+      .values([
+        {
+          goalId: longTermGoal.id,
+          title: "Agent Orchestration",
+          description: "Hermes ACP integration and multi-agent coordination.",
+          priority: "high" as const,
+          color: "#6366f1",
+          tags: ["hermes", "agents"],
+        },
+        {
+          goalId: longTermGoal.id,
+          title: "CI Pipeline",
+          description: "GitHub Actions, test coverage, and deployment automation.",
+          priority: "medium" as const,
+          color: "#10b981",
+          tags: ["ci", "devops"],
+        },
+      ])
+      .onConflictDoNothing();
+  }
+
+  if (mediumGoal) {
+    await db
+      .insert(projects)
+      .values({
+        goalId: mediumGoal.id,
+        title: "Content Marketing",
+        description: "Blog posts, social media, and community engagement.",
+        priority: "medium" as const,
+        color: "#f59e0b",
+        tags: ["marketing"],
+      })
+      .onConflictDoNothing();
+  }
+
+  // ── Brain Dump entries ────────────────────────────────────────────────
+
+  const brainDumpEntries = await db
+    .insert(brainDump)
+    .values([
+      {
+        content: "Investigate adding WebSocket support for real-time CI status updates",
+        source: "manual" as const,
+        status: "pending" as const,
+        tags: ["infrastructure", "realtime"],
+      },
+      {
+        content: "Create a weekly automated report summarizing agent activity and token usage",
+        source: "manual" as const,
+        status: "pending" as const,
+        tags: ["reporting", "automation"],
+      },
+      {
+        content: "Evaluate switching from Qwen3-27B to a larger model for better reasoning",
+        source: "manual" as const,
+        status: "pending" as const,
+        tags: ["llm", "performance"],
+      },
+      {
+        content: "Add dark mode toggle animation to sidebar",
+        source: "manual" as const,
+        status: "triaged" as const,
+        triageSummary: "Nice-to-have UI polish, not urgent. Could be a quick win for a new contributor.",
+        tags: ["ui"],
+      },
+      {
+        content: "Set up monitoring for WireGuard tunnel latency over time",
+        source: "manual" as const,
+        status: "converted" as const,
+        convertedToType: "tactic" as const,
+        triageSummary: "Actionable: infrastructure monitoring task. Converted to tactic for Scout to investigate.",
+        tags: ["monitoring", "infrastructure"],
+      },
+    ])
+    .onConflictDoNothing()
+    .returning();
+
+  return {
+    strategy,
+    tactics: [tactic1, tactic2, tactic3],
+    goals: [longTermGoal, milestone1, milestone2, mediumGoal, completedGoal].filter(Boolean),
+    brainDump: brainDumpEntries,
+  };
 }
 
 if (require.main === module) {

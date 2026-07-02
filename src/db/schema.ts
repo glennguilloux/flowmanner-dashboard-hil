@@ -52,6 +52,56 @@ export const tacticSource = hilOps.enum("tactic_source", [
 
 export const ciState = hilOps.enum("ci_state", ["passing", "failing", "pending", "none"]);
 
+export const goalType = hilOps.enum("goal_type", ["long-term", "medium-term"]);
+
+export const goalStatus = hilOps.enum("goal_status", [
+  "active",
+  "completed",
+  "archived",
+]);
+
+export const goalCategory = hilOps.enum("goal_category", [
+  "do",
+  "schedule",
+  "delegate",
+  "eliminate",
+  "general",
+]);
+
+export const projectStatus = hilOps.enum("project_status", [
+  "active",
+  "paused",
+  "completed",
+  "archived",
+]);
+
+export const projectPriority = hilOps.enum("project_priority", [
+  "critical",
+  "high",
+  "medium",
+  "low",
+]);
+
+export const brainDumpSource = hilOps.enum("brain_dump_source", [
+  "manual",
+  "voice",
+  "slack",
+  "email",
+]);
+
+export const brainDumpStatus = hilOps.enum("brain_dump_status", [
+  "pending",
+  "triaged",
+  "converted",
+  "dismissed",
+]);
+
+export const brainDumpConvertType = hilOps.enum("brain_dump_convert_type", [
+  "tactic",
+  "goal",
+  "project",
+]);
+
 export const users = hilOps.table("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -85,6 +135,7 @@ export const strategies = hilOps.table("strategies", {
   // FM mission id (when this strategy is 1:1 with a FlowManner mission). Nullable
   // so demo/synthetic strategies don't need it.
   missionId: text("mission_id"),
+  goalId: uuid("goal_id").references(() => goals.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -127,6 +178,10 @@ export const tactics = hilOps.table("tactics", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  goalId: uuid("goal_id").references(() => goals.id, { onDelete: "set null" }),
+  estimatedMinutes: integer("estimated_minutes"),
+  actualMinutes: integer("actual_minutes"),
+  acceptanceCriteria: text("acceptance_criteria").array().notNull().default([]),
 }, (table) => ({
   // Upsert key for sync: same source + same sourceId = same tactic. Postgres
   // allows multiple NULLs in a unique index, so simulated tactics (no sourceId)
@@ -161,6 +216,84 @@ export const approvals = hilOps.table("approvals", {
     .notNull()
     .defaultNow(),
 });
+
+export const goals = hilOps.table(
+  "goals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    type: goalType("type").notNull().default("medium-term"),
+    category: goalCategory("category").notNull().default("general"),
+    status: goalStatus("status").notNull().default("active"),
+    timeframe: text("timeframe"),
+    parentGoalId: uuid("parent_goal_id"),
+    targetDate: timestamp("target_date", { withTimezone: true }),
+    progress: integer("progress").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    parentGoalIdx: index("goals_parent_goal_id_idx").on(table.parentGoalId),
+    statusUpdatedIdx: index("goals_status_updated_at_idx").on(
+      table.status,
+      table.updatedAt,
+    ),
+  }),
+);
+
+export const projects = hilOps.table(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    goalId: uuid("goal_id").references(() => goals.id, {
+      onDelete: "set null",
+    }),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    status: projectStatus("status").notNull().default("active"),
+    priority: projectPriority("priority").notNull().default("medium"),
+    color: text("color").notNull().default("#6366f1"),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    goalIdx: index("projects_goal_id_idx").on(table.goalId),
+    statusIdx: index("projects_status_idx").on(table.status),
+  }),
+);
+
+export const brainDump = hilOps.table(
+  "brain_dump",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    content: text("content").notNull(),
+    source: brainDumpSource("source").notNull().default("manual"),
+    status: brainDumpStatus("status").notNull().default("pending"),
+    convertedToId: uuid("converted_to_id"),
+    convertedToType: brainDumpConvertType("converted_to_type"),
+    triageSummary: text("triage_summary"),
+    tags: text("tags").array().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    statusIdx: index("brain_dump_status_idx").on(table.status),
+  }),
+);
 
 export const messages = hilOps.table("messages", {
   id: uuid("id").primaryKey().defaultRandom(),
