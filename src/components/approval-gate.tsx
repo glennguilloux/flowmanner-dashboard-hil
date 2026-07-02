@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { tactics } from "@/db/schema";
 import { CheckCircle2, XCircle, HelpCircle } from "lucide-react";
@@ -19,19 +19,26 @@ export function ApprovalGate({
   >("approve");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submitLock = useRef(false);
 
   // Gate is only actionable while the tactic is still in review. After a
   // decision is made (approved/rejected/request_more_info with a follow-up)
   // the form is hidden — the agent assessment panel still shows *why* the
   // tactic was originally gated (`requiresHumanApproval`), but you can't
   // re-decide from the same page. Use Decision history below.
-  if (tactic.status !== "needs_review") {
+  if (tactic.status !== "needs_review" || submitted) {
     return null;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Ref-based lock prevents concurrent submissions from double-clicks.
+    // The state-based `submitting` flag is for UI feedback (button text),
+    // but the ref is checked synchronously before any async work.
+    if (submitLock.current) return;
+    submitLock.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -46,10 +53,14 @@ export function ApprovalGate({
         };
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
+      // Immediately hide the form to prevent any further interaction.
+      // The page will refresh and show the new status.
+      setSubmitted(true);
       setNotes("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Submit failed");
+      submitLock.current = false;
     } finally {
       setSubmitting(false);
     }
