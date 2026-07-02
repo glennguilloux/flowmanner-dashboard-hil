@@ -15,12 +15,14 @@ import { ModelQuickSwap } from "@/components/model-quick-swap";
 import { GoalsPanel } from "@/components/goals-panel";
 import { BrainDumpPanel } from "@/components/brain-dump-panel";
 import { DecisionLogPanel } from "@/components/decision-log-panel";
+import { SkillsPanel } from "@/components/skills-panel";
+import { EisenhowerMatrixPanel } from "@/components/eisenhower-matrix-panel";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes, activeGoals, brainDumpEntries, brainDumpPending, recentDecisions } =
+  const { prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes, activeGoals, brainDumpEntries, brainDumpPending, recentDecisions, topSkills, skillCount } =
     await getDashboardData();
 
   const prTactics = prRows.map((t) => ({
@@ -105,6 +107,14 @@ export default async function DashboardPage() {
 
           <SectionErrorBoundary label="Decisions">
             <DecisionLogPanel decisions={recentDecisions} />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Skills">
+            <SkillsPanel skills={topSkills} count={skillCount} />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Priority Matrix">
+            <EisenhowerMatrixPanel />
           </SectionErrorBoundary>
 
           <SectionErrorBoundary label="System Health">

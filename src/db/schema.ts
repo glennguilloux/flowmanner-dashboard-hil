@@ -8,6 +8,7 @@ import {
   pgSchema,
   index,
   uniqueIndex,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 // All dashboard-owned tables live in the `hil_ops` Postgres schema. This keeps
@@ -118,6 +119,11 @@ export const agents = hilOps.table("agents", {
   role: text("role").notNull(),
   model: text("model"), // always a self-hosted homelab model — never SaaS
   avatarUrl: text("avatar_url"),
+  instructions: text("instructions"), // full system prompt (markdown)
+  capabilities: text("capabilities").array().notNull().default([]), // what this agent can do
+  status: text("status").notNull().default("active"), // active | inactive
+  icon: text("icon"), // lucide icon name (e.g. "Brain")
+  description: text("description"), // what this agent handles
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -182,6 +188,9 @@ export const tactics = hilOps.table("tactics", {
   estimatedMinutes: integer("estimated_minutes"),
   actualMinutes: integer("actual_minutes"),
   acceptanceCriteria: text("acceptance_criteria").array().notNull().default([]),
+  collaborators: text("collaborators").array().notNull().default([]), // agent IDs
+  importance: text("importance"), // important | not-important (Eisenhower)
+  urgency: text("urgency"), // urgent | not-urgent (Eisenhower)
 }, (table) => ({
   // Upsert key for sync: same source + same sourceId = same tactic. Postgres
   // allows multiple NULLs in a unique index, so simulated tactics (no sourceId)
@@ -292,6 +301,36 @@ export const brainDump = hilOps.table(
   },
   (table) => ({
     statusIdx: index("brain_dump_status_idx").on(table.status),
+  }),
+);
+
+export const skills = hilOps.table("skills", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  description: text("description").notNull().default(""),
+  content: text("content").notNull().default(""), // markdown for agent prompts
+  tags: text("tags").array().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const agentSkills = hilOps.table(
+  "agent_skills",
+  {
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    skillId: uuid("skill_id")
+      .notNull()
+      .references(() => skills.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.agentId, table.skillId] }),
+    skillIdx: index("agent_skills_skill_id_idx").on(table.skillId),
   }),
 );
 

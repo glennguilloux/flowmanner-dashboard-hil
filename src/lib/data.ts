@@ -13,6 +13,7 @@ import { getMissionHealth } from "@/lib/missions";
 import { getActiveGoals } from "@/lib/goals";
 import { getPendingBrainDumpEntries, countPendingBrainDump } from "@/lib/brain-dump";
 import { getRecentDecisions } from "@/lib/decisions";
+import { getTopSkills, countSkills } from "@/lib/skills";
 
 export async function getDefaultUser() {
   return db.query.users.findFirst({
@@ -191,8 +192,10 @@ export async function getDashboardData(): Promise<{
   brainDumpEntries: Awaited<ReturnType<typeof getPendingBrainDumpEntries>>;
   brainDumpPending: Awaited<ReturnType<typeof countPendingBrainDump>>;
   recentDecisions: Awaited<ReturnType<typeof getRecentDecisions>>;
+  topSkills: Awaited<ReturnType<typeof getTopSkills>>;
+  skillCount: Awaited<ReturnType<typeof countSkills>>;
 }> {
-  const [prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes, activeGoals, brainDumpEntries, brainDumpPending, recentDecisions] =
+  const [prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes, activeGoals, brainDumpEntries, brainDumpPending, recentDecisions, topSkills, skillCount] =
     await Promise.all([
       getTactics({ source: "pr" }),
       getTactics({ status: "needs_review" }),
@@ -206,6 +209,8 @@ export async function getDashboardData(): Promise<{
       getPendingBrainDumpEntries(),
       countPendingBrainDump(),
       getRecentDecisions(),
+      getTopSkills(),
+      countSkills(),
     ]);
   return {
     prRows,
@@ -220,5 +225,7 @@ export async function getDashboardData(): Promise<{
     brainDumpEntries,
     brainDumpPending,
     recentDecisions,
+    topSkills,
+    skillCount,
   };
 }

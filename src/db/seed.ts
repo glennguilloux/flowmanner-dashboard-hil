@@ -9,6 +9,8 @@ import {
   goals,
   projects,
   brainDump,
+  skills,
+  agentSkills,
 } from "@/db/schema";
 
 // Demo seed. All agents point at homelab LLM models (no SaaS) — this is the
@@ -40,18 +42,36 @@ export async function seedDatabase() {
         role: "research_scout",
         model: "llama.cpp:qwen3-27b-q5 (homelab)",
         avatarUrl: "🕵️",
+        description:
+          "Research and analysis agent. Searches for information, cross-references sources, and produces structured reports.",
+        capabilities: ["web_search", "source_verification", "report_generation"],
+        instructions:
+          "You are a research scout. Your job is to find, verify, and synthesize information from multiple sources.\n\nRules:\n1. Always cross-reference claims with at least 2 independent sources.\n2. Flag any conflicting information explicitly.\n3. Structure reports with clear headings and citations.\n4. Never fabricate data — if you can't find something, say so.",
+        status: "active",
       },
       {
         name: "Drafter",
         role: "outreach_drafter",
         model: "llama.cpp:qwen3-27b-q5 (homelab)",
         avatarUrl: "✍️",
+        description:
+          "Content creation agent. Drafts emails, documents, and outreach materials with careful tone management.",
+        capabilities: ["email_drafting", "content_creation", "tone_calibration"],
+        instructions:
+          "You are an outreach drafter. Your job is to create clear, professional content for external communications.\n\nRules:\n1. Match tone to audience — formal for customers, casual for internal.\n2. Never make financial, legal, or compliance claims without explicit source citation.\n3. Always gate customer-facing content for human review.\n4. Keep emails under 200 words unless complexity requires more.",
+        status: "active",
       },
       {
         name: "Guard",
         role: "risk_gatekeeper",
         model: "llama.cpp:qwen3-27b-q5 (homelab)",
         avatarUrl: "🛡️",
+        description:
+          "Risk assessment agent. Scans outbound communications for compliance issues, guarantees, and high-risk language.",
+        capabilities: ["risk_scanning", "compliance_check", "language_analysis"],
+        instructions:
+          "You are a risk gatekeeper. Your job is to scan communications for potential risks before they go out.\n\nRules:\n1. Flag any language that could be read as financial, security, or compliance guarantees.\n2. Check for terms like 'guarantees', 'always secure', 'never loses data'.\n3. Suggest safer alternatives for flagged language.\n4. Assign risk levels: low (internal), medium (partner-facing), high (customer/legal).",
+        status: "active",
       },
     ])
     .onConflictDoNothing()
@@ -114,6 +134,8 @@ export async function seedDatabase() {
       source: "simulated",
       attemptCount: 1,
       maxAttempts: 3,
+      importance: "important",
+      urgency: "not-urgent",
     })
     .returning();
 
@@ -146,6 +168,8 @@ export async function seedDatabase() {
         "Retention claim is sourced from a single internal spec; competitor comparison is unverified; email is customer-facing — high blast radius.",
       attemptCount: 2,
       maxAttempts: 3,
+      importance: "important",
+      urgency: "urgent",
     })
     .returning();
 
@@ -171,6 +195,35 @@ export async function seedDatabase() {
       source: "simulated",
       attemptCount: 1,
       maxAttempts: 3,
+      importance: "not-important",
+      urgency: "urgent",
+    })
+    .returning();
+
+  // Tactic 4: low priority — not important + not urgent (ELIMINATE quadrant).
+  const [tactic4] = await db
+    .insert(tactics)
+    .values({
+      strategyId: strategy.id,
+      agentId: scout.id,
+      title: "Audit legacy dashboard telemetry endpoints",
+      description:
+        "Review unused telemetry endpoints from the v1 dashboard and remove dead code. Low impact, no urgency.",
+      steps: [
+        "List all telemetry endpoints from v1",
+        "Check which ones have traffic in the last 30 days",
+        "Remove endpoints with zero traffic",
+      ],
+      sources: [{ title: "v1 telemetry config", url: "#" }],
+      confidence: 40,
+      riskLevel: "low",
+      status: "proposed",
+      requiresHumanApproval: false,
+      source: "simulated",
+      attemptCount: 0,
+      maxAttempts: 3,
+      importance: "not-important",
+      urgency: "not-urgent",
     })
     .returning();
 
@@ -325,6 +378,76 @@ export async function seedDatabase() {
       .onConflictDoNothing();
   }
 
+  // ── Skills Library ────────────────────────────────────────────────────
+
+  const skillRows = await db
+    .insert(skills)
+    .values([
+      {
+        name: "Web Research",
+        description:
+          "Ability to search the web, extract relevant information, and synthesize findings into structured reports.",
+        content:
+          "You are a research assistant. When asked to research a topic:\n1. Search for authoritative sources.\n2. Extract key facts and data points.\n3. Synthesize findings into a structured summary with citations.\n4. Flag any conflicting information or gaps in available data.",
+        tags: ["research", "web", "analysis"],
+      },
+      {
+        name: "Eisenhower Triage",
+        description:
+          "Classify incoming tasks into the Eisenhower matrix quadrants based on importance and urgency.",
+        content:
+          "You are a task prioritization assistant. For each task, classify it into one of four quadrants:\n- DO (important + urgent): Handle immediately.\n- SCHEDULE (important + not urgent): Block time for this.\n- DELEGATE (not important + urgent): Assign to an available agent.\n- ELIMINATE (not important + not urgent): Deprioritize or drop.\n\nJustify each classification with a brief reasoning.",
+        tags: ["triage", "prioritization", "eisenhower"],
+      },
+      {
+        name: "Task Management",
+        description:
+          "Break down complex tasks into subtasks, estimate effort, and track dependencies.",
+        content:
+          "You are a task management assistant. Given a complex task:\n1. Break it into 3-7 concrete subtasks.\n2. Estimate effort (minutes) for each subtask.\n3. Identify dependencies between subtasks.\n4. Flag risks or blockers.\n5. Suggest acceptance criteria for each subtask.",
+        tags: ["tasks", "planning", "subtasks"],
+      },
+      {
+        name: "Code Review",
+        description:
+          "Review code changes for correctness, security, performance, and style compliance.",
+        content:
+          "You are a code reviewer. For each change:\n1. Check for correctness — does it do what it claims?\n2. Check for security issues — injection, auth bypass, data leaks.\n3. Check for performance — N+1 queries, missing indexes, unbounded loops.\n4. Check for style — matches project conventions.\n5. Provide actionable suggestions, not just criticism.",
+        tags: ["code", "review", "security"],
+      },
+    ])
+    .onConflictDoNothing()
+    .returning();
+
+  // Link agents to skills
+  if (skillRows.length > 0 && scout && drafter && guard) {
+    const webResearch = skillRows.find((s) => s.name === "Web Research");
+    const eisenhower = skillRows.find((s) => s.name === "Eisenhower Triage");
+    const taskMgmt = skillRows.find((s) => s.name === "Task Management");
+    const codeReview = skillRows.find((s) => s.name === "Code Review");
+
+    const links: { agentId: string; skillId: string }[] = [];
+    if (webResearch) {
+      links.push({ agentId: scout.id, skillId: webResearch.id });
+    }
+    if (eisenhower) {
+      links.push(
+        { agentId: scout.id, skillId: eisenhower.id },
+        { agentId: guard.id, skillId: eisenhower.id },
+      );
+    }
+    if (taskMgmt) {
+      links.push({ agentId: drafter.id, skillId: taskMgmt.id });
+    }
+    if (codeReview) {
+      links.push({ agentId: guard.id, skillId: codeReview.id });
+    }
+
+    if (links.length > 0) {
+      await db.insert(agentSkills).values(links).onConflictDoNothing();
+    }
+  }
+
   // ── Brain Dump entries ────────────────────────────────────────────────
 
   const brainDumpEntries = await db
@@ -369,9 +492,10 @@ export async function seedDatabase() {
 
   return {
     strategy,
-    tactics: [tactic1, tactic2, tactic3],
+    tactics: [tactic1, tactic2, tactic3, tactic4],
     goals: [longTermGoal, milestone1, milestone2, mediumGoal, completedGoal].filter(Boolean),
     brainDump: brainDumpEntries,
+    skills: skillRows,
   };
 }
 
