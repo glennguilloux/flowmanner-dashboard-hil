@@ -7,6 +7,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { execFile } from "node:child_process";
+import { readdir, stat } from "node:fs/promises";
 import { promisify } from "node:util";
 
 const execFileP = promisify(execFile);
@@ -221,15 +222,11 @@ async function checkOpenCode(): Promise<ServiceHealth> {
     `${process.env.HOME ?? "/root"}/.local/share/opencode`;
   const start = Date.now();
   try {
-    // Quick check: does the storage directory exist and is it readable?
-    const { stdout } = await execFileP(
-      "ls",
-      [storagePath],
-      { timeout: 3_000 },
-    );
+    await stat(storagePath);
     const latencyMs = Date.now() - start;
-    const entries = stdout.trim().split("\n").filter(Boolean);
-    const projects = entries.length;
+    // Quick count of project directories.
+    const entries = await readdir(storagePath, { withFileTypes: true });
+    const projects = entries.filter((e) => e.isDirectory()).length;
     return {
       id: "opencode",
       name: "OpenCode",
@@ -237,7 +234,7 @@ async function checkOpenCode(): Promise<ServiceHealth> {
       status: "healthy",
       latencyMs,
       detail: projects > 0
-        ? `${projects} item${projects !== 1 ? "s" : ""} in storage`
+        ? `${projects} project${projects !== 1 ? "s" : ""} stored`
         : "Storage accessible",
     };
   } catch {

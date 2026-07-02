@@ -151,12 +151,16 @@ function parseSession(raw: RawSession, fileName: string): OpenCodeSession | null
 
 // ── Storage directory scanning ────────────────────────────────────────────
 
+// Global cap on total file reads per request to prevent runaway I/O.
+const MAX_FILE_READS = 50;
+
 async function scanProjectStorage(
   projectDir: string,
   projectName: string,
 ): Promise<{ sessions: OpenCodeSession[]; project: OpenCodeProject }> {
   const storageDir = join(projectDir, "storage");
   const sessions: OpenCodeSession[] = [];
+  let readsRemaining = MAX_FILE_READS;
 
   try {
     const entries = await readdir(storageDir, { withFileTypes: true });
@@ -169,26 +173,31 @@ async function scanProjectStorage(
     // Also check for subdirectories that might contain session data.
     const subdirs = entries.filter((e) => e.isDirectory());
 
-    for (const file of jsonFiles.slice(0, 50)) {
+    for (const file of jsonFiles) {
+      if (readsRemaining <= 0) break;
       const filePath = join(storageDir, file.name);
       const raw = await readJsonFile<RawSession>(filePath);
+      readsRemaining--;
       if (raw) {
         const session = parseSession(raw, file.name);
         if (session) sessions.push(session);
       }
     }
 
-    // Scan subdirectories for session JSON files.
-    for (const dir of subdirs.slice(0, 20)) {
+    // Scan subdirectories for session JSON files (only if budget remains).
+    for (const dir of subdirs) {
+      if (readsRemaining <= 0) break;
       const dirPath = join(storageDir, dir.name);
       try {
         const dirEntries = await readdir(dirPath, { withFileTypes: true });
         const dirJson = dirEntries.filter(
           (e) => e.isFile() && extname(e.name) === ".json",
         );
-        for (const file of dirJson.slice(0, 50)) {
+        for (const file of dirJson) {
+          if (readsRemaining <= 0) break;
           const filePath = join(dirPath, file.name);
           const raw = await readJsonFile<RawSession>(filePath);
+          readsRemaining--;
           if (raw) {
             const session = parseSession(raw, `${dir.name}/${file.name}`);
             if (session) sessions.push(session);
@@ -239,7 +248,7 @@ export async function getOpenCodeHealth(): Promise<OpenCodeHealth> {
     const projectDirs = entries.filter((e) => e.isDirectory());
 
     let totalSessions = 0;
-    for (const dir of projectDirs.slice(0, 20)) {
+    for (const dir of projectDirs.slice(0, 10)) {
       const storageDir = join(OPENCODE_BASE, dir.name, "storage");
       if (await fileExists(storageDir)) {
         try {
@@ -289,7 +298,7 @@ export async function getOpenCodeOverview(): Promise<OpenCodeOverview> {
     const projectDirs = entries.filter((e) => e.isDirectory());
 
     const results = await Promise.all(
-      projectDirs.slice(0, 20).map((dir) =>
+      projectDirs.slice(0, 10).map((dir) =>
         scanProjectStorage(join(OPENCODE_BASE, dir.name), dir.name),
       ),
     );
