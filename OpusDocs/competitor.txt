@@ -1,0 +1,396 @@
+API.market Deep-Dive Report
+Executive Summary
+API.market is a developer-first API marketplace platform (not a single API service) that acts as a two-sided marketplace connecting API sellers (providers) with API buyers (developers/consumers). Think of it as "App Store for APIs" — a centralized platform to discover, test, integrate, and monetize APIs.
+1. What Is It? (Core Product)
+Aspect	Details
+Type	API Marketplace / Gateway Platform
+URL	https://api.market
+Documentation	https://docs.api.market
+Seller Console	https://api.market/seller/dashboard
+Founded	~2023-2024 (relatively new)
+Team	Shashank Aggarwal (Founder & CEO), Aditi (Co-Founder & CPO), small dev team
+Tagline	"The API Marketplace for Developers"
+2. How It Works (Architecture)
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  API Sellers    │────▶│   API.market     │────▶│  API Buyers     │
+│  (Providers)    │     │   (Gateway)      │     │  (Consumers)    │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                              │
+                    ┌─────────┼─────────┐
+                    ▼         ▼         ▼
+             Authentication  Billing  Rate Limiting
+             Analytics       Proxy    Unified API Key
+The Flow:
+1. Sellers import APIs via OpenAPI/Swagger specs (YAML/JSON)
+2. API.market proxies all requests — handles auth, billing, rate limiting, analytics
+3. Buyers subscribe → get one unified API key → call any subscribed API
+4. API.market takes a cut (revenue share model)
+3. For API Buyers (Developers)
+Feature	Description
+Discovery	250+ APIs & AI models across categories: NLP, Image Gen, FinTech, Crypto, etc.
+Testing	Interactive API Playground — test in browser, no SDK/setup needed
+Integration	Auto-generated code snippets (cURL, Python, JS, Go, etc.)
+Billing	Usage-based, unified invoice, single API key for all subscriptions
+Analytics	Real-time dashboard: request counts, latency, error rates, costs
+Free Tier	Most APIs offer free trials (no credit card)
+Categories of APIs Available:
+- 🤖 AI/ML: LLMs, embeddings, image generation, speech-to-text
+- 💳 FinTech: Payments, banking, KYC, fraud detection
+- 📊 Data: Crypto, stocks, weather, geolocation, enrichment
+- 📧 Communication: Email, SMS, push notifications, WhatsApp
+- 🔧 Developer Tools: OCR, PDF, scraping, validation, QR codes
+4. For API Sellers (Providers)
+Feature	Description
+Onboarding	Upload OpenAPI spec → live in minutes
+Pricing	Flexible: per-call, subscription tiers, freemium, custom
+Monetization	Built-in Stripe billing, subscription management
+Analytics	Revenue, usage, subscriber metrics, churn
+SEO/Exposure	Marketplace listing + SEO optimization
+Cost	Free to list; revenue share on sales
+Seller Workflow:
+Create Org → Import OpenAPI Spec → Define Products/Pricing → Test → Publish → Earn
+5. Technical Details
+Technical Aspect	Specification
+Auth	Single API key (Bearer token) for all subscribed APIs
+Protocol	REST (proxies any HTTP API)
+Spec Support	OpenAPI 3.0 / Swagger 2.0
+Rate Limiting	Per-plan, enforced at gateway
+Latency	~50-100ms overhead (proxy layer)
+Uptime Claim	99.9%
+SDKs	Not needed — direct HTTP calls with unified key
+Webhooks	For subscription events, usage alerts
+Example Usage:
+# One key for ALL subscribed APIs
+curl -H "Authorization: Bearer mk_live_abc123" \
+  https://api.market/v1/proxy/{api-slug}/{endpoint}
+6. Business Model
+Model	Details
+Revenue	Revenue share (platform fee on transactions)
+Seller Fees	~15-30% (typical marketplace cut, exact % not public)
+Buyer Fees	No platform fee — pay API provider's price
+Free Tier	Free to browse, free trials on most APIs
+7. Competitors / Alternatives
+Platform	Focus	Differentiation
+RapidAPI	Largest marketplace	Enterprise features, huge catalog
+APILayer	Curated APIs	Quality-focused, simpler pricing
+Apideck	Unified APIs	Normalized schemas across providers
+Postman API Network	Discovery	Integrated with Postman client
+AWS Marketplace	Enterprise	Cloud-integrated, procurement-friendly
+Kong Konnect	API Gateway + Marketplace	Full lifecycle management
+API.market's Positioning: "Developer-first," lower fees than RapidAPI, better DX, AI-model focus.
+8. Key Differentiators
+1. Unified API Key — One key for hundreds of APIs (vs. managing 50+ keys)
+2. AI Model Focus — Strong emphasis on LLM/image APIs with playground testing
+3. Built-in Playground — Test before integrating, no local setup
+4. OpenAPI-Native — Import spec → instant product, no manual config
+5. Transparent Pricing — Compare side-by-side in marketplace
+9. Potential Concerns / Risks
+Risk	Assessment
+Single Point of Failure	All traffic proxies through them — if gateway down, all APIs down
+Latency Overhead	+50-100ms per request
+Vendor Lock-in	Migration requires re-integrating each API directly
+Young Platform	~2 years old — less battle-tested than RapidAPI (2015)
+Revenue Share	15-30% cut reduces seller margins
+Data Privacy	All request/response data passes through their infrastructure
+10. When to Use API.market
+✅ Good Fit:
+- Rapid prototyping with multiple APIs
+- Teams wanting unified billing/analytics
+- Accessing AI models (LLMs, image gen) without managing multiple accounts
+- Startups needing quick API integration without vendor negotiations
+- Testing/comparing similar APIs (e.g., 5 different OCR APIs)
+❌ Avoid If:
+- Ultra-low latency required (<50ms critical)
+- Strict data residency/compliance (GDPR, HIPAA) — data passes through their servers
+- High-volume production where proxy cost + latency matters
+- Need direct provider relationships/SLAs
+- Custom auth flows (OAuth, mTLS) not supported by gateway
+11. Quick Start for Developers
+# 1. Browse marketplace
+open https://api.market/
+
+# 2. Find an API (e.g., "GPT-4", "Stable Diffusion", "Weather")
+# 3. Click "Try Free" → test in playground
+
+# 4. Subscribe to plan → get API key from dashboard
+# 5. Integrate:
+curl -H "Authorization: Bearer YOUR_UNIFIED_KEY" \
+  "https://api.market/v1/proxy/openai/chat/completions" \
+  -d '{"model": "gpt-4", "messages": [{"role": "user", "content": "Hello"}]}'
+12. Verdict
+API.market is a legitimate, well-designed API marketplace solving real developer pain points:
+- Fragmented API keys → unified key
+- Complex billing → single invoice
+- Discovery friction → curated marketplace with playground
+- Seller monetization → no-code listing + built-in payments
+Best for: Prototyping, AI-heavy apps, teams using 5+ external APIs, developers who value DX over raw performance.
+Not for: High-frequency trading, regulated data workloads, or when you need direct provider control.
+Report compiled from: api.market/about, docs.api.market, aitools.inc, public web sources. Last verified: 2026-06-24
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Based on your preference for practical, copy-paste ready implementation artifacts (and your existing use of SQLite for state persistence in your Hermes homelab), here is the exact technical implementation to build the core engine of API.market on your site.
+This implementation covers the three most critical components described in the report: The Unified API Gateway (Proxy), OpenAPI Seller Onboarding, and Usage/Billing Analytics.
+Tech Stack
+Runtime: Node.js + Express
+Database: SQLite (via better-sqlite3 for high-performance, file-based state persistence)
+Proxy/HTTP: axios
+OpenAPI Parser: @apidevtools/swagger-parser
+Install dependencies:
+
+npm install express better-sqlite3 axios @apidevtools/swagger-parser
+
+Artifact 1: Database Schema (db.js)
+This sets up the SQLite state persistence for users, APIs, unified keys, subscriptions, and the usage logs required for the billing/revenue-share model.
+
+javascript:
+const Database = require('better-sqlite3');
+const db = new Database('marketplace.db');
+
+// Enable WAL mode for better concurrent read/write performance under gateway load
+db.pragma('journal_mode = WAL');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE,
+    role TEXT CHECK(role IN ('buyer', 'seller'))
+  );
+
+  CREATE TABLE IF NOT EXISTS apis (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    seller_id INTEGER,
+    name TEXT,
+    slug TEXT UNIQUE, -- e.g., 'openai', 'stable-diffusion'
+    base_url TEXT,    -- Upstream API base URL
+    upstream_auth_header TEXT, -- e.g., 'Authorization' or 'x-api-key'
+    upstream_auth_token TEXT   -- The provider's actual secret key
+  );
+
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    key_value TEXT UNIQUE, -- The unified "mk_live_..." key
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    api_id INTEGER,
+    plan_tier TEXT, -- e.g., 'free', 'pro', 'enterprise'
+    rate_limit_rpm INTEGER DEFAULT 60,
+    UNIQUE(user_id, api_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS usage_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    api_key_id INTEGER,
+    api_id INTEGER,
+    status_code INTEGER,
+    latency_ms INTEGER,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+module.exports = db;
+
+
+Artifact 2: The Unified API Gateway (gateway.js)
+This is the core proxy engine. It intercepts all buyer requests, validates the unified API key, checks subscriptions, enforces rate limits, proxies the request to the upstream provider, and logs the usage for analytics.
+
+javascript:
+const express = require('express');
+const axios = require('axios');
+const db = require('./db');
+
+const router = express.Router();
+
+// Middleware: Unified Auth, Subscription Check, and Rate Limiting
+const gatewayMiddleware = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing Bearer token' });
+  }
+
+  const keyValue = authHeader.split(' ')[1];
+  const apiSlug = req.params.apiSlug;
+
+  // 1. Validate Unified API Key
+  const keyRecord = db.prepare('SELECT * FROM api_keys WHERE key_value = ?').get(keyValue);
+  if (!keyRecord) return res.status(401).json({ error: 'Invalid API Key' });
+
+  // 2. Find the Target API
+  const apiRecord = db.prepare('SELECT * FROM apis WHERE slug = ?').get(apiSlug);
+  if (!apiRecord) return res.status(404).json({ error: 'API not found' });
+
+  // 3. Check Subscription & Rate Limits
+  const sub = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND api_id = ?')
+    .get(keyRecord.user_id, apiRecord.id);
+
+  if (!sub) return res.status(403).json({ error: 'Subscription required for this API' });
+
+  // Simple Rate Limiting Check (Requests per minute)
+  const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+  const recentCalls = db.prepare(
+    'SELECT COUNT(*) as count FROM usage_logs WHERE api_key_id = ? AND timestamp > ?'
+  ).get(keyRecord.id, oneMinuteAgo);
+
+  if (recentCalls.count >= sub.rate_limit_rpm) {
+    return res.status(429).json({ error: 'Rate limit exceeded' });
+  }
+
+  // Attach context to request
+  req.context = { keyRecord, apiRecord, sub };
+  next();
+};
+
+// The Proxy Endpoint (Handles ALL HTTP methods)
+router.all('/v1/proxy/:apiSlug/*', gatewayMiddleware, async (req, res) => {
+  const { apiRecord, keyRecord } = req.context;
+
+  // Extract the endpoint path (everything after /v1/proxy/{slug}/)
+  const endpointPath = req.params[0];
+  const targetUrl = `${apiRecord.base_url}/${endpointPath}${req._parsedUrl.search || ''}`;
+
+  const startTime = Date.now();
+
+  try {
+    // Prepare headers for upstream provider
+    const upstreamHeaders = { ...req.headers };
+    delete upstreamHeaders['host'];
+    delete upstreamHeaders['authorization']; // Strip buyer's unified key
+
+    // Inject upstream provider's auth (managed secretly by your platform)
+    if (apiRecord.upstream_auth_header) {
+      upstreamHeaders[apiRecord.upstream_auth_header] = apiRecord.upstream_auth_token;
+    }
+
+    // Proxy the request
+    const response = await axios({
+      method: req.method,
+      url: targetUrl,
+      headers: upstreamHeaders,
+      data: req.body,
+      validateStatus: () => true, // Don't throw on 4xx/5xx from upstream
+      timeout: 30000
+    });
+
+    const latency = Date.now() - startTime;
+
+    // Log usage for analytics and billing (Revenue Share calculation)
+    db.prepare(`
+      INSERT INTO usage_logs (api_key_id, api_id, status_code, latency_ms)
+      VALUES (?, ?, ?, ?)
+    `).run(keyRecord.id, apiRecord.id, response.status, latency);
+
+    // Return upstream response to the buyer
+    res.status(response.status).send(response.data);
+
+  } catch (error) {
+    res.status(502).json({ error: 'Upstream API unreachable', details: error.message });
+  }
+});
+
+module.exports = router;
+
+
+
+Artifact 3: Seller OpenAPI Importer (seller.js)
+Allows sellers to instantly onboard their APIs by simply providing a URL to their OpenAPI/Swagger spec.
+
+const express = require('express');
+const SwaggerParser = require('@apidevtools/swagger-parser');
+const db = require('./db');
+
+const router = express.Router();
+
+router.post('/seller/import', async (req, res) => {
+  const { specUrl, name, sellerId, upstreamAuthHeader, upstreamAuthToken } = req.body;
+
+  try {
+    // Parse and validate the OpenAPI spec automatically
+    const api = await SwaggerParser.validate(specUrl);
+
+    // Extract base URL from OpenAPI 3.0 'servers' array
+    const baseUrl = api.servers?.[0]?.url;
+    if (!baseUrl) throw new Error('OpenAPI spec must define a server URL');
+
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    // Save to database
+    db.prepare(`
+      INSERT INTO apis (seller_id, name, slug, base_url, upstream_auth_header, upstream_auth_token)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(sellerId, name, slug, baseUrl, upstreamAuthHeader || '', upstreamAuthToken || '');
+
+    res.json({ success: true, slug, message: 'API imported and live!' });
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to parse OpenAPI spec', details: err.message });
+  }
+});
+
+module.exports = router;
+
+
+Artifact 4: Analytics & Billing Queries
+To implement the "Revenue Share" and "Analytics" features mentioned in the report, you can run these SQL queries against your usage_logs table:
+
+javascript:
+// Get real-time dashboard metrics for a specific API (Seller View)
+const getApiAnalytics = (apiId) => {
+  return db.prepare(`
+    SELECT
+      COUNT(*) as total_requests,
+      ROUND(AVG(latency_ms), 2) as avg_latency_ms,
+      SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as error_count,
+      SUM(CASE WHEN status_code < 400 THEN 1 ELSE 0 END) as success_count
+    FROM usage_logs
+    WHERE api_id = ? AND timestamp > datetime('now', '-24 hours')
+  `).get(apiId);
+};
+
+// Calculate Revenue Share (e.g., if you charge $0.001 per successful call and take 20%)
+const calculateBilling = (apiId, pricePerCall, platformCutPercentage) => {
+  const stats = db.prepare(`
+    SELECT COUNT(*) as billable_calls
+    FROM usage_logs
+    WHERE api_id = ? AND status_code < 400 AND timestamp > datetime('now', '-30 days')
+  `).get(apiId);
+
+  const grossRevenue = stats.billable_calls * pricePerCall;
+  const platformFee = grossRevenue * (platformCutPercentage / 100);
+  const sellerPayout = grossRevenue - platformFee;
+
+  return { grossRevenue, platformFee, sellerPayout, billableCalls: stats.billable_calls };
+};
+
+
+How to wire it together (server.js)
+
+const express = require('express');
+const gateway = require('./gateway');
+const seller = require('./seller');
+
+const app = express();
+app.use(express.json());
+
+// Mount routes
+app.use(gateway);
+app.use(seller);
+
+app.listen(4000, () => console.log('API.market clone running on port 4000'));
