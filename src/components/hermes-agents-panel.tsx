@@ -50,6 +50,16 @@ type HermesCapability = {
   description?: string;
 };
 
+type HermesApproval = {
+  id: string;
+  action: string;
+  reason?: string;
+  tool?: string;
+  status: "pending" | "approved" | "denied" | "expired";
+  scope?: string;
+  created_at: string;
+};
+
 type HermesData = {
   health: { ok: boolean; error?: string };
   sessions: HermesSession[];
@@ -57,6 +67,7 @@ type HermesData = {
   skills: HermesSkill[];
   tools: HermesTool[];
   capabilities: HermesCapability[];
+  approvals: HermesApproval[];
   latencyMs: number;
 };
 
@@ -240,6 +251,9 @@ export function HermesAgentsPanel() {
   const failedJobs = jobs.filter((j) => j.status === "failed");
   const activeSessions = sessions.filter((s) => s.status === "active");
   const supportedCaps = capabilities.filter((c) => c.supported);
+  const pendingApprovals = (data.approvals ?? []).filter(
+    (a) => a.status === "pending",
+  );
 
   if (!health.ok) {
     return (
@@ -331,6 +345,41 @@ export function HermesAgentsPanel() {
           value={tools.length}
         />
       </div>
+
+      {/* Pending approvals — needs human attention */}
+      {pendingApprovals.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+          <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-700">
+            <AlertTriangle className="h-3 w-3 animate-pulse text-amber-500" />
+            Pending Approvals ({pendingApprovals.length})
+          </h3>
+          <div className="divide-y divide-amber-100">
+            {pendingApprovals.slice(0, 3).map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {a.action}
+                  </p>
+                  {a.reason && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {a.reason}
+                    </p>
+                  )}
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  Awaiting
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-amber-600">
+            → Go to Agent Approvals panel to decide
+          </p>
+        </div>
+      )}
 
       {/* Capabilities */}
       {supportedCaps.length > 0 && (

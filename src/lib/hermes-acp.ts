@@ -62,6 +62,32 @@ export type HermesJob = {
   error?: string;
 };
 
+export type HermesApprovalScope =
+  | "allow_once"
+  | "allow_session"
+  | "allow_always"
+  | "deny";
+
+export type HermesApproval = {
+  id: string;
+  session_id?: string;
+  job_id?: string;
+  /** What the agent wants to do (e.g. shell command, file write). */
+  action: string;
+  /** Human-readable description of why the agent needs approval. */
+  reason?: string;
+  /** The tool or capability that triggered the approval request. */
+  tool?: string;
+  status: "pending" | "approved" | "denied" | "expired";
+  scope?: HermesApprovalScope;
+  decided_by?: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+  /** Seconds until the approval auto-denies. Null = no timeout. */
+  timeout_seconds?: number | null;
+};
+
 export type HermesOverview = {
   health: HermesHealth;
   capabilities: HermesCapability[];
@@ -69,6 +95,7 @@ export type HermesOverview = {
   tools: HermesTool[];
   sessions: HermesSession[];
   jobs: HermesJob[];
+  approvals: HermesApproval[];
   latencyMs: number;
 };
 
@@ -200,6 +227,84 @@ export async function getJobs(): Promise<HermesJob[]> {
   }
 }
 
+/**
+ * Fetch pending (and recently resolved) approval requests from Hermes.
+ * Tries /v1/approvals first, falls back to /api/approvals.
+ * Returns [] if the endpoint doesn't exist (older Hermes versions).
+ */
+export async function getApprovals(): Promise<HermesApproval[]> {
+  try {
+    const data = await hermesFetch<{
+      approvals?: HermesApproval[];
+    }>("/v1/approvals");
+    return data.approvals ?? [];
+  } catch {
+    // Fallback: try /api/approvals
+    try {
+      const data = await hermesFetch<{
+        approvals?: HermesApproval[];
+      }>("/api/approvals");
+      return data.approvals ?? [];
+    } catch {
+      return [];
+    }
+  }
+}
+
+/**
+ * Lightweight single-attempt approval count for the health endpoint.
+ * Returns the count of pending approvals, or 0 if the endpoint doesn't
+ * exist. Only tries /v1/approvals (no fallback) to keep the chip poll fast.
+ */
+export async function getPendingApprovalCount(): Promise<number> {
+  try {
+    const data = await hermesFetch<{
+      approvals?: HermesApproval[];
+    }>("/v1/approvals", { timeoutMs: 5_000 });
+    return (
+      data.approvals?.filter((a) => a.status === "pending").length ?? 0
+    );
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Submit an approval decision to Hermes.
+ * Sends the decision (scope + optional notes) back to the agent so it can
+ * resume or abort the suspended task.
+ */
+export async function submitApprovalDecision(
+  approvalId: string,
+  decision: {
+    scope: HermesApprovalScope;
+    notes?: string;
+  },
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    // Try /v1/approvals/:id first
+    await hermesFetch<{ ok?: boolean }>(`/v1/approvals/${approvalId}`, {
+      method: "POST",
+      body: JSON.stringify(decision),
+    });
+    return { ok: true };
+  } catch {
+    // Fallback: /api/approvals/:id
+    try {
+      await hermesFetch<{ ok?: boolean }>(`/api/approvals/${approvalId}`, {
+        method: "POST",
+        body: JSON.stringify(decision),
+      });
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Submit failed",
+      };
+    }
+  }
+}
+
 // ── Aggregated overview ───────────────────────────────────────────────────
 
 /**
@@ -209,7 +314,7 @@ export async function getJobs(): Promise<HermesJob[]> {
 export async function getHermesOverview(): Promise<HermesOverview> {
   const start = Date.now();
 
-  const [health, capabilities, skills, tools, sessions, jobs] =
+  const [health, capabilities, skills, tools, sessions, jobs, approvals] =
     await Promise.all([
       checkHermesHealth(),
       getCapabilities(),
@@ -217,6 +322,7 @@ export async function getHermesOverview(): Promise<HermesOverview> {
       getToolsets(),
       getSessions(),
       getJobs(),
+      getApprovals(),
     ]);
 
   return {
@@ -226,6 +332,7 @@ export async function getHermesOverview(): Promise<HermesOverview> {
     tools,
     sessions,
     jobs,
+    approvals,
     latencyMs: Date.now() - start,
   };
 }

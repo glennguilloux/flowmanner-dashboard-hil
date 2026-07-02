@@ -9,6 +9,7 @@ import { DashboardMissionsPanel } from "@/components/dashboard-missions-panel";
 import { SystemHealthPanel } from "@/components/system-health-panel";
 import { ActivityTimelinePanel } from "@/components/activity-timeline-panel";
 import { HermesAgentsPanel } from "@/components/hermes-agents-panel";
+import { HermesApprovalPanel } from "@/components/hermes-approval-panel";
 import { OpenCodePanel } from "@/components/opencode-panel";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
@@ -92,6 +93,10 @@ export default async function DashboardPage() {
 
           <SectionErrorBoundary label="Recent Activity">
             <ActivityTimelinePanel />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Agent Approvals">
+            <HermesApprovalPanel />
           </SectionErrorBoundary>
 
           <SectionErrorBoundary label="Hermes Agent">

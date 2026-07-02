@@ -14,7 +14,9 @@ import {
   AlertTriangle,
   Clock,
   Loader2,
+  XCircle,
 } from "lucide-react";
+import { relativeTime } from "@/lib/relative-time";
 
 // ── Types (mirrored from hermes-acp.ts to avoid importing server code) ───
 
@@ -46,6 +48,16 @@ type HermesTool = {
   description: string;
 };
 
+type HermesApproval = {
+  id: string;
+  action: string;
+  reason?: string;
+  tool?: string;
+  status: "pending" | "approved" | "denied" | "expired";
+  scope?: string;
+  created_at: string;
+};
+
 type HermesData = {
   health: { ok: boolean; error?: string };
   sessions: HermesSession[];
@@ -53,6 +65,7 @@ type HermesData = {
   skills: HermesSkill[];
   tools: HermesTool[];
   capabilities: { name: string; supported: boolean }[];
+  approvals: HermesApproval[];
   latencyMs: number;
 };
 
@@ -61,7 +74,7 @@ type Props = {
   onClose: () => void;
 };
 
-type Tab = "overview" | "sessions" | "jobs" | "skills";
+type Tab = "overview" | "sessions" | "jobs" | "skills" | "approvals";
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -105,6 +118,15 @@ export function HermesPanel({ open, onClose }: Props) {
     { id: "sessions", label: "Sessions", icon: <Cpu className="h-3.5 w-3.5" /> },
     { id: "jobs", label: "Jobs", icon: <Activity className="h-3.5 w-3.5" /> },
     { id: "skills", label: "Skills & Tools", icon: <Sparkles className="h-3.5 w-3.5" /> },
+    ...(data?.approvals?.some((a) => a.status === "pending")
+      ? [
+          {
+            id: "approvals" as const,
+            label: `Approvals (${data.approvals.filter((a) => a.status === "pending").length})`,
+            icon: <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -201,6 +223,9 @@ export function HermesPanel({ open, onClose }: Props) {
           {data && tab === "jobs" && <JobsTab jobs={data.jobs} />}
           {data && tab === "skills" && (
             <SkillsTab skills={data.skills} tools={data.tools} />
+          )}
+          {data && tab === "approvals" && (
+            <ApprovalsTab approvals={data.approvals} />
           )}
         </div>
       </aside>
@@ -506,6 +531,89 @@ function StatusPill({ status }: { status?: string }) {
     >
       {status ?? "unknown"}
     </span>
+  );
+}
+
+function ApprovalsTab({ approvals }: { approvals: HermesApproval[] }) {
+  const pending = approvals.filter((a) => a.status === "pending");
+  const resolved = approvals.filter((a) => a.status !== "pending");
+
+  return (
+    <div className="space-y-4">
+      {pending.length > 0 && (
+        <div>
+          <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-600">
+            <AlertTriangle className="h-3 w-3 animate-pulse" />
+            Pending ({pending.length})
+          </h3>
+          <div className="space-y-2">
+            {pending.map((a) => (
+              <div
+                key={a.id}
+                className="rounded-xl border-2 border-amber-200 bg-amber-50/60 p-3"
+              >
+                <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {a.action}
+                </p>
+                {a.reason && (
+                  <p className="mt-0.5 text-xs text-slate-500">{a.reason}</p>
+                )}
+                <div className="mt-2 flex items-center gap-2">
+                  {a.tool && (
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:bg-slate-800">
+                      {a.tool}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-slate-400">
+                    {relativeTime(a.created_at)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-amber-600">
+            → Use the Agent Approvals panel on the dashboard to approve or deny
+          </p>
+        </div>
+      )}
+
+      {pending.length === 0 && (
+        <EmptyState
+          icon={<CheckCircle2 className="h-6 w-6 text-emerald-300" />}
+          message="No pending approvals"
+        />
+      )}
+
+      {resolved.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Recently Resolved ({resolved.length})
+          </h3>
+          <div className="space-y-1.5">
+            {resolved.slice(0, 10).map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/50"
+              >
+                {a.status === "approved" ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+                )}
+                <p className="truncate text-xs text-slate-700 dark:text-slate-300">
+                  {a.action}
+                </p>
+                {a.scope && (
+                  <span className="ml-auto shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:bg-slate-700">
+                    {a.scope}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

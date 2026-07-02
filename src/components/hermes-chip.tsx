@@ -8,6 +8,7 @@ type HealthData = {
   error?: string;
   sessions?: number;
   jobs?: number;
+  pendingApprovals?: number;
 };
 
 type Props = {
@@ -26,12 +27,7 @@ export function HermesChip({ onOpenPanel }: Props) {
           signal: AbortSignal.timeout(5_000),
         });
         if (!res.ok) return;
-        const data = (await res.json()) as {
-          ok: boolean;
-          error?: string;
-          sessions?: number;
-          jobs?: number;
-        };
+        const data = (await res.json()) as HealthData;
         if (!cancelled) setHealth(data);
       } catch {
         if (!cancelled) setHealth({ ok: false, error: "Unreachable" });
@@ -73,6 +69,11 @@ export function HermesChip({ onOpenPanel }: Props) {
               : health.error ?? "Offline"}
         </p>
       </div>
+      {online && health?.pendingApprovals != null && health.pendingApprovals > 0 && (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+          {health.pendingApprovals}
+        </span>
+      )}
     </button>
   );
 }
