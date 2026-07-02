@@ -1,32 +1,22 @@
 import { Suspense } from "react";
-import { getTactics, getLastSyncTimes } from "@/lib/data";
-import { countInbox, countMissions, getMissions } from "@/lib/inbox";
+import { getDashboardData } from "@/lib/data";
 import { computeCiRollup } from "@/lib/ci";
 import { SkeletonCard } from "@/components/skeleton-card";
 import { ExecutiveBriefing } from "@/components/executive-briefing";
-import { MissionHealthPanel } from "@/components/mission-health-panel";
-import { GovernancePanel } from "@/components/governance-panel";
-import { SessionRitualPanel } from "@/components/session-ritual-panel";
-import { KanbanSnapshotPanel } from "@/components/kanban-snapshot-panel";
 import { RefreshBar } from "@/components/refresh-bar";
 import { DashboardStatCards } from "@/components/dashboard-stat-cards";
 import { DashboardPrsPanel } from "@/components/dashboard-prs-panel";
 import { DashboardApprovalPanel } from "@/components/dashboard-approval-panel";
 import { DashboardMissionsPanel } from "@/components/dashboard-missions-panel";
+import { SystemHealthPanel } from "@/components/system-health-panel";
+import { ActivityTimelinePanel } from "@/components/activity-timeline-panel";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [prRows, needsReview, inbox, missions, missionList, syncTimes] =
-    await Promise.all([
-      getTactics({ source: "pr" }),
-      getTactics({ status: "needs_review" }),
-      countInbox(),
-      countMissions(),
-      getMissions({ limit: 5 }),
-      getLastSyncTimes(),
-    ]);
+  const { prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes } =
+    await getDashboardData();
 
   const prTactics = prRows.map((t) => ({
     id: t.tactic.id,
@@ -42,7 +32,7 @@ export default async function DashboardPage() {
   const ciFailing = prTactics.filter((p) => p.ci.state === "failing");
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-[1400px] space-y-6">
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold text-slate-950 dark:text-slate-50">
@@ -56,7 +46,7 @@ export default async function DashboardPage() {
 
       <RefreshBar />
 
-      {/* Stat cards */}
+      {/* Stat cards — full width */}
       <DashboardStatCards
         prCount={prTactics.length}
         ciFailingCount={ciFailing.length}
@@ -66,64 +56,49 @@ export default async function DashboardPage() {
         missionsPending={missions.pending}
       />
 
-      {/* ════════ EXECUTIVE LAYER ════════ */}
-      <SectionLabel>Executive</SectionLabel>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ExecutiveBriefing />
+      {/* Two-column layout: main content + right sidebar */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+        {/* ── Left: Primary panels ── */}
+        <div className="space-y-6 lg:col-span-8">
+          <SectionErrorBoundary label="Executive briefing">
+            <ExecutiveBriefing />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Awaiting approval">
+            <DashboardApprovalPanel
+              needsReview={needsReview}
+              resolvedCount={resolvedTactics.length}
+            />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Pull Requests">
+            <DashboardPrsPanel prTactics={prTactics} lastSyncedAt={syncTimes.prs} />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Missions">
+            <DashboardMissionsPanel
+              missions={missions}
+              missionList={missionList}
+              health={missionHealth}
+            />
+          </SectionErrorBoundary>
         </div>
-        <div className="space-y-4">
-          <Suspense fallback={<SkeletonCard lines={4} />}>
-            <SessionRitualPanel />
-          </Suspense>
-          <Suspense fallback={<SkeletonCard lines={4} />}>
-            <MissionHealthPanel />
-          </Suspense>
+
+        {/* ── Right: Health + Activity sidebar ── */}
+        <div className="space-y-6 lg:col-span-4">
+          <SectionErrorBoundary label="System Health">
+            <Suspense fallback={<SkeletonCard lines={6} />}>
+              <SystemHealthPanel />
+            </Suspense>
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Recent Activity">
+            <Suspense fallback={<SkeletonCard lines={6} />}>
+              <ActivityTimelinePanel />
+            </Suspense>
+          </SectionErrorBoundary>
         </div>
       </div>
-
-      {/* ════════ OPERATIONS LAYER ════════ */}
-      <SectionLabel>Operations</SectionLabel>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SectionErrorBoundary label="Pull Requests">
-          <DashboardPrsPanel prTactics={prTactics} lastSyncedAt={syncTimes.prs} />
-        </SectionErrorBoundary>
-        <SectionErrorBoundary label="Awaiting approval">
-          <DashboardApprovalPanel needsReview={needsReview} />
-        </SectionErrorBoundary>
-      </div>
-
-      {/* Missions in flight */}
-      <SectionErrorBoundary label="Missions">
-        <DashboardMissionsPanel missions={missions} missionList={missionList} />
-      </SectionErrorBoundary>
-
-      {/* ════════ KANBAN ════════ */}
-      <SectionLabel>Kanban</SectionLabel>
-      <SectionErrorBoundary label="Kanban Board">
-        <Suspense fallback={<SkeletonCard lines={4} />}>
-          <KanbanSnapshotPanel />
-        </Suspense>
-      </SectionErrorBoundary>
-
-      {/* ════════ GOVERNANCE LAYER ════════ */}
-      <SectionLabel>Governance</SectionLabel>
-      <SectionErrorBoundary label="Human Gates">
-        <Suspense fallback={<SkeletonCard lines={3} />}>
-          <GovernancePanel />
-        </Suspense>
-      </SectionErrorBoundary>
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 pt-2">
-      <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-        {children}
-      </h2>
-      <div className="h-px flex-1 bg-slate-200" />
     </div>
   );
 }

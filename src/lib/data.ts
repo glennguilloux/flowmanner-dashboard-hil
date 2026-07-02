@@ -8,6 +8,8 @@ import {
   approvals,
 } from "@/db/schema";
 import { eq, ne, desc, and, isNotNull } from "drizzle-orm";
+import { countInbox, countMissions, getMissions } from "@/lib/inbox";
+import { getMissionHealth } from "@/lib/missions";
 
 export async function getDefaultUser() {
   return db.query.users.findFirst({
@@ -159,5 +161,49 @@ export async function getLastSyncTimes(): Promise<{ prs: string | null; inbox: s
   return {
     prs: prStrategy?.updatedAt?.toISOString() ?? null,
     inbox: inboxStrategy?.updatedAt?.toISOString() ?? null,
+  };
+}
+
+/**
+ * Aggregated data fetch for the Dashboard page. Replaces the 8-query
+ * `Promise.all` previously inline in `app/page.tsx` so the page can simply
+ * `const data = await getDashboardData()` and destructure. The panel-specific
+ * shaping (e.g. `prRows` → `prTactics` via `computeCiRollup`) stays in the
+ * page because `lib/ci.ts` is a UI helper, not a data layer.
+ *
+ * Return type is explicit and derived from the underlying fetchers via
+ * `Awaited<ReturnType<...>>` — any signature change in those fetchers
+ * propagates here automatically.
+ */
+export async function getDashboardData(): Promise<{
+  prRows: Awaited<ReturnType<typeof getTactics>>;
+  needsReview: Awaited<ReturnType<typeof getTactics>>;
+  resolvedTactics: Awaited<ReturnType<typeof getTactics>>;
+  inbox: Awaited<ReturnType<typeof countInbox>>;
+  missions: Awaited<ReturnType<typeof countMissions>>;
+  missionList: Awaited<ReturnType<typeof getMissions>>;
+  missionHealth: Awaited<ReturnType<typeof getMissionHealth>>;
+  syncTimes: Awaited<ReturnType<typeof getLastSyncTimes>>;
+}> {
+  const [prRows, needsReview, inbox, missions, missionList, missionHealth, resolvedTactics, syncTimes] =
+    await Promise.all([
+      getTactics({ source: "pr" }),
+      getTactics({ status: "needs_review" }),
+      countInbox(),
+      countMissions(),
+      getMissions({ limit: 5 }),
+      getMissionHealth(),
+      getTactics({ excludeStatus: "needs_review", humanDecisionIsNotNull: true }),
+      getLastSyncTimes(),
+    ]);
+  return {
+    prRows,
+    needsReview,
+    inbox,
+    missions,
+    missionList,
+    missionHealth,
+    resolvedTactics,
+    syncTimes,
   };
 }

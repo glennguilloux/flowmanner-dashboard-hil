@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Target,
   ListChecks,
+  LayoutGrid,
   Bot,
   GitPullRequest,
   Users,
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import { ModelSwapChip } from "@/components/model-swap-chip";
 import { ModelSwapPanel } from "@/components/model-swap-panel";
+import { WgWatchdogChip } from "@/components/wg-watchdog-chip";
+import { WgWatchdogPanel } from "@/components/wg-watchdog-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SessionRitualChip } from "@/components/session-ritual-chip";
 
@@ -22,6 +25,7 @@ const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/strategies", label: "Strategies", icon: Target },
   { href: "/tactics", label: "Tactics", icon: ListChecks },
+  { href: "/kanban", label: "Kanban", icon: LayoutGrid },
   { href: "/prs", label: "Pull Requests", icon: GitPullRequest },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/users", label: "Users", icon: Users },
@@ -30,6 +34,7 @@ const nav = [
 export function Sidebar() {
   const pathname = usePathname();
   const [modelPanelOpen, setModelPanelOpen] = useState(false);
+  const [wgPanelOpen, setWgPanelOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close mobile drawer on navigation.
@@ -90,6 +95,7 @@ export function Sidebar() {
           </div>
         </div>
         <SessionRitualChip />
+        <WgWatchdogChip onOpenPanel={() => setWgPanelOpen(true)} />
         <ModelSwapChip onOpenPanel={() => setModelPanelOpen(true)} />
         <ThemeToggle />
       </div>
@@ -146,6 +152,10 @@ export function Sidebar() {
       <ModelSwapPanel
         open={modelPanelOpen}
         onClose={() => setModelPanelOpen(false)}
+      />
+      <WgWatchdogPanel
+        open={wgPanelOpen}
+        onClose={() => setWgPanelOpen(false)}
       />
     </>
   );
