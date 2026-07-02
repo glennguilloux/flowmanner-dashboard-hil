@@ -1,16 +1,25 @@
 import { db } from "@/db";
 import { brainDump, tactics, goals } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
-import { chat } from "@/lib/llm";
+import { chat, LLM_MODEL } from "@/lib/llm";
+import { logLlmUsage } from "@/lib/usage";
 
 // ── Queries ────────────────────────────────────────────────────────────────
 
-export async function getBrainDumpEntries(limit = 50) {
+export async function getBrainDumpEntries(limit = 50, offset = 0) {
   return db
     .select()
     .from(brainDump)
     .orderBy(desc(brainDump.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function countBrainDump(): Promise<number> {
+  const [row] = await db
+    .select({ cnt: sql<number>`count(*)::int` })
+    .from(brainDump);
+  return row?.cnt ?? 0;
 }
 
 export async function getPendingBrainDumpEntries() {
@@ -144,6 +153,14 @@ export async function triagePendingEntries(): Promise<{
       { maxTokens: 2000, temperature: 0.3 },
     );
     content = result.content;
+
+    // Log LLM usage (fire-and-forget)
+    logLlmUsage({
+      model: LLM_MODEL,
+      inputTokens: result.usage.prompt_tokens,
+      outputTokens: result.usage.completion_tokens,
+      source: "triage",
+    });
   } catch (err) {
     // LLM unreachable — entries stay pending
     return {
@@ -167,6 +184,14 @@ export async function triagePendingEntries(): Promise<{
         { maxTokens: 2000, temperature: 0.2 },
       );
       results = parseTriageResponse(retry.content);
+
+      // Log retry usage
+      logLlmUsage({
+        model: LLM_MODEL,
+        inputTokens: retry.usage.prompt_tokens,
+        outputTokens: retry.usage.completion_tokens,
+        source: "triage",
+      });
     } catch {
       // LLM failed on retry
     }

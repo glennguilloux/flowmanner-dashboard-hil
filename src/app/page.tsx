@@ -17,6 +17,7 @@ import { BrainDumpPanel } from "@/components/brain-dump-panel";
 import { DecisionLogPanel } from "@/components/decision-log-panel";
 import { SkillsPanel } from "@/components/skills-panel";
 import { EisenhowerMatrixPanel } from "@/components/eisenhower-matrix-panel";
+import { UsagePanel } from "@/components/usage-panel";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 
 export const dynamic = "force-dynamic";
@@ -115,6 +116,10 @@ export default async function DashboardPage() {
 
           <SectionErrorBoundary label="Priority Matrix">
             <EisenhowerMatrixPanel />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="LLM Usage">
+            <UsagePanel />
           </SectionErrorBoundary>
 
           <SectionErrorBoundary label="System Health">

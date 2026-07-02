@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { KeyboardHelp } from "@/components/keyboard-help";
+import { SearchTrigger } from "@/components/search-trigger";
 
 export const metadata: Metadata = {
   title: "FlowManner HIL",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Sidebar />
           <main role="main" className="flex-1 p-6 pt-16 lg:p-10 lg:pt-10">{children}</main>
         </div>
+        <SearchTrigger />
         <KeyboardHelp />
       </body>
     </html>

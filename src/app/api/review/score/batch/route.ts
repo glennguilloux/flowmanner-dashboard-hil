@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { tactics } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { isUnauthorized } from "@/lib/auth";
-import { scoreTactic, type ScoredTactic } from "@/lib/review";
+import { scoreTactic, escalateExhaustedTactics, type ScoredTactic } from "@/lib/review";
 
 export const dynamic = "force-dynamic";
 
@@ -57,10 +57,14 @@ export async function POST(_request: Request) {
     }
   }
 
+  // Auto-escalate any tactics where attemptCount >= maxAttempts.
+  const escalated = await escalateExhaustedTactics();
+
   return NextResponse.json({
     total: allUnscored.length,
     reviewed,
     failed,
+    escalated,
     results,
   });
 }

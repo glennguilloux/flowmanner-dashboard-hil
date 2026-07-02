@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { eq } from "drizzle-orm";
 import {
   users,
   agents,
@@ -11,6 +12,9 @@ import {
   brainDump,
   skills,
   agentSkills,
+  tacticDependencies,
+  tacticSubtasks,
+  llmUsage,
 } from "@/db/schema";
 
 // Demo seed. All agents point at homelab LLM models (no SaaS) — this is the
@@ -201,6 +205,7 @@ export async function seedDatabase() {
     .returning();
 
   // Tactic 4: low priority — not important + not urgent (ELIMINATE quadrant).
+  // attemptCount = maxAttempts to demo the escalation notice (Phase 8).
   const [tactic4] = await db
     .insert(tactics)
     .values({
@@ -217,10 +222,10 @@ export async function seedDatabase() {
       sources: [{ title: "v1 telemetry config", url: "#" }],
       confidence: 40,
       riskLevel: "low",
-      status: "proposed",
-      requiresHumanApproval: false,
+      status: "needs_review",
+      requiresHumanApproval: true,
       source: "simulated",
-      attemptCount: 0,
+      attemptCount: 3,
       maxAttempts: 3,
       importance: "not-important",
       urgency: "not-urgent",
@@ -447,6 +452,175 @@ export async function seedDatabase() {
       await db.insert(agentSkills).values(links).onConflictDoNothing();
     }
   }
+
+  // ── Subtasks & Dependencies (Phase 7) ──────────────────────────────────
+
+  // Subtasks for tactic 1 (Cross-check memory replay)
+  await db
+    .insert(tacticSubtasks)
+    .values([
+      {
+        tacticId: tactic1.id,
+        title: "Snapshot the last 7 days of mission_runs",
+        done: true,
+        order: 0,
+      },
+      {
+        tacticId: tactic1.id,
+        title: "Replay each run through the memory agent",
+        done: true,
+        order: 1,
+      },
+      {
+        tacticId: tactic1.id,
+        title: "Diff expected vs. observed state rows",
+        done: false,
+        order: 2,
+      },
+      {
+        tacticId: tactic1.id,
+        title: "Emit a per-day accuracy report",
+        done: false,
+        order: 3,
+      },
+    ])
+    .onConflictDoNothing();
+
+  // Subtasks for tactic 2 (Email ops about retention)
+  await db
+    .insert(tacticSubtasks)
+    .values([
+      {
+        tacticId: tactic2.id,
+        title: "Pull the source for the 90-day retention claim",
+        done: false,
+        order: 0,
+      },
+      {
+        tacticId: tactic2.id,
+        title: "Draft personalized opener per recipient",
+        done: false,
+        order: 1,
+      },
+      {
+        tacticId: tactic2.id,
+        title: "Gate for human approval before send",
+        done: false,
+        order: 2,
+      },
+    ])
+    .onConflictDoNothing();
+
+  // Subtasks for tactic 3 (Risk scan)
+  await db
+    .insert(tacticSubtasks)
+    .values([
+      {
+        tacticId: tactic3.id,
+        title: "Scan drafts for guarantee language",
+        done: true,
+        order: 0,
+      },
+      {
+        tacticId: tactic3.id,
+        title: "Flag terms like 'guarantees', 'always secure'",
+        done: false,
+        order: 1,
+      },
+      {
+        tacticId: tactic3.id,
+        title: "Suggest safer alternatives",
+        done: false,
+        order: 2,
+      },
+    ])
+    .onConflictDoNothing();
+
+  // Dependencies: tactic 2 (email) is blocked by tactic 1 (cross-check)
+  // tactic 3 (risk scan) is blocked by tactic 2 (email)
+  await db
+    .insert(tacticDependencies)
+    .values([
+      { blockerId: tactic1.id, blockedId: tactic2.id },
+      { blockerId: tactic2.id, blockedId: tactic3.id },
+    ])
+    .onConflictDoNothing();
+
+  // Add acceptance criteria and time tracking to some tactics
+  await db
+    .update(tactics)
+    .set({
+      acceptanceCriteria: [
+        "Replay accuracy >= 95% for all 7 days",
+        "No memory row deletions without backup",
+        "Per-day report includes confidence intervals",
+      ],
+      estimatedMinutes: 120,
+      actualMinutes: 90,
+    })
+    .where(eq(tactics.id, tactic1.id));
+
+  await db
+    .update(tactics)
+    .set({
+      acceptanceCriteria: [
+        "Two independent sources for 90-day retention claim",
+        "No competitor comparison paragraph",
+        "Human approval recorded before send",
+      ],
+      estimatedMinutes: 60,
+    })
+    .where(eq(tactics.id, tactic2.id));
+
+  await db
+    .update(tactics)
+    .set({
+      estimatedMinutes: 45,
+      actualMinutes: 30,
+    })
+    .where(eq(tactics.id, tactic3.id));
+
+  // ── LLM Usage sample data (Phase 9) ──────────────────────────────────
+
+  const models = ["Qwen3.6-27B-Q5_K_M-mtp.gguf", "qwen3:27b-q5"];
+  const sources: Array<"briefing" | "review" | "triage" | "other"> = [
+    "briefing",
+    "review",
+    "triage",
+    "other",
+  ];
+
+  const usageRows: Array<{
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    source: "briefing" | "review" | "triage" | "other";
+    createdAt: Date;
+  }> = [];
+
+  for (let day = 0; day < 7; day++) {
+    const date = new Date();
+    date.setDate(date.getDate() - day);
+    date.setHours(0, 0, 0, 0);
+
+    // 10-20 requests per day, distributed across models and sources
+    const requestCount = 10 + Math.floor(Math.random() * 11);
+    for (let r = 0; r < requestCount; r++) {
+      const hour = 8 + Math.floor(Math.random() * 12); // 8am-8pm
+      const ts = new Date(date);
+      ts.setHours(hour, Math.floor(Math.random() * 60));
+
+      usageRows.push({
+        model: models[Math.floor(Math.random() * models.length)],
+        inputTokens: 500 + Math.floor(Math.random() * 3500),
+        outputTokens: 100 + Math.floor(Math.random() * 1500),
+        source: sources[Math.floor(Math.random() * sources.length)],
+        createdAt: ts,
+      });
+    }
+  }
+
+  await db.insert(llmUsage).values(usageRows).onConflictDoNothing();
 
   // ── Brain Dump entries ────────────────────────────────────────────────
 

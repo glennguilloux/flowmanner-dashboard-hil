@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Keyboard, Sun, Moon } from "lucide-react";
 
 const shortcuts = [
+  { keys: ["⌘", "K"], description: "Open search" },
   { keys: ["?"], description: "Show this help" },
   { keys: ["r"], description: "Refresh current page" },
   { keys: ["t"], description: "Toggle dark/light theme" },

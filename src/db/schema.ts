@@ -103,6 +103,13 @@ export const brainDumpConvertType = hilOps.enum("brain_dump_convert_type", [
   "project",
 ]);
 
+export const llmUsageSource = hilOps.enum("llm_usage_source", [
+  "briefing",
+  "review",
+  "triage",
+  "other",
+]);
+
 export const users = hilOps.table("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -212,6 +219,44 @@ export const tactics = hilOps.table("tactics", {
   // Index on source for PR/inbox page filters.
   sourceIdx: index("tactics_source_idx").on(table.source),
 }));
+
+export const tacticDependencies = hilOps.table(
+  "tactic_dependencies",
+  {
+    blockerId: uuid("blocker_id")
+      .notNull()
+      .references(() => tactics.id, { onDelete: "cascade" }),
+    blockedId: uuid("blocked_id")
+      .notNull()
+      .references(() => tactics.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.blockerId, table.blockedId] }),
+    blockedIdx: index("tactic_deps_blocked_id_idx").on(table.blockedId),
+  }),
+);
+
+export const tacticSubtasks = hilOps.table(
+  "tactic_subtasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tacticId: uuid("tactic_id")
+      .notNull()
+      .references(() => tactics.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    done: boolean("done").notNull().default(false),
+    order: integer("order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    tacticIdx: index("tactic_subtasks_tactic_id_idx").on(table.tacticId),
+  }),
+);
 
 export const approvals = hilOps.table("approvals", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -331,6 +376,33 @@ export const agentSkills = hilOps.table(
   (table) => ({
     pk: primaryKey({ columns: [table.agentId, table.skillId] }),
     skillIdx: index("agent_skills_skill_id_idx").on(table.skillId),
+  }),
+);
+
+export const llmUsage = hilOps.table(
+  "llm_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull(),
+    outputTokens: integer("output_tokens").notNull(),
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    cacheCreationTokens: integer("cache_creation_tokens").notNull().default(0),
+    costUsd: text("cost_usd"), // null for self-hosted
+    source: llmUsageSource("source").notNull().default("other"),
+    tacticId: uuid("tactic_id").references(() => tactics.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    createdAtIdx: index("llm_usage_created_at_idx").on(table.createdAt),
+    modelCreatedIdx: index("llm_usage_model_created_at_idx").on(
+      table.model,
+      table.createdAt,
+    ),
   }),
 );
 

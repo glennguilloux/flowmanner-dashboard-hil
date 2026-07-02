@@ -4,7 +4,7 @@ import { eq, desc, and, sql } from "drizzle-orm";
 
 // ── Goal queries ───────────────────────────────────────────────────────────
 
-export async function getGoals() {
+export async function getGoals(limit = 50, offset = 0) {
   const rows = await db
     .select({
       goal: goals,
@@ -13,9 +13,18 @@ export async function getGoals() {
     .from(goals)
     .leftJoin(projects, eq(projects.goalId, goals.id))
     .groupBy(goals.id)
-    .orderBy(desc(goals.updatedAt));
+    .orderBy(desc(goals.updatedAt))
+    .limit(limit)
+    .offset(offset);
 
   return rows;
+}
+
+export async function countGoals(): Promise<number> {
+  const [row] = await db
+    .select({ cnt: sql<number>`count(*)::int` })
+    .from(goals);
+  return row?.cnt ?? 0;
 }
 
 export async function getActiveGoals() {

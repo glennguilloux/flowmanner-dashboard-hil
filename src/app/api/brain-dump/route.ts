@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBrainDumpEntries, createBrainDumpEntry } from "@/lib/brain-dump";
+import { getBrainDumpEntries, countBrainDump, createBrainDumpEntry } from "@/lib/brain-dump";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const data = await getBrainDumpEntries();
-  return NextResponse.json({ ok: true, data });
+export async function GET(request: NextRequest) {
+  const sp = request.nextUrl.searchParams;
+  const limit = Math.min(Number(sp.get("limit")) || 50, 200);
+  const offset = Number(sp.get("offset")) || 0;
+
+  const [data, total] = await Promise.all([
+    getBrainDumpEntries(limit, offset),
+    countBrainDump(),
+  ]);
+
+  return NextResponse.json({
+    ok: true,
+    data,
+    meta: { total, returned: data.length, limit, offset },
+  });
 }
 
 export async function POST(request: NextRequest) {

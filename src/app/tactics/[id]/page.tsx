@@ -1,14 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTacticDetail, getDefaultUser } from "@/lib/data";
+import { getSubtasks, getDependencies } from "@/lib/tactic-details";
 import { MessageThread } from "@/components/message-thread";
 import { ApprovalGate } from "@/components/approval-gate";
 import { StatusBadge, ConfidenceBadge, RiskBadge } from "@/components/status-badge";
 import { PrCiPanel } from "@/components/pr-ci-panel";
 import { PrMergeButton } from "@/components/pr-merge-button";
+import { AttemptBadge } from "@/components/attempt-badge";
+import { EscalationNotice } from "@/components/escalation-notice";
 import { ArrowLeft, AlertTriangle, Bot, Target, GitPullRequest, ExternalLink } from "lucide-react";
 import { LlmReviewButton } from "@/components/llm-review-button";
 import { computeCiRollup } from "@/lib/ci";
+import { SubtaskList } from "@/components/subtask-list";
+import { DependencyBadge } from "@/components/dependency-badge";
+import { AcceptanceCriteriaList } from "@/components/acceptance-criteria-list";
+import { TimeTrackingDisplay } from "@/components/time-tracking-display";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +29,12 @@ export default async function TacticDetailPage({
   const user = await getDefaultUser();
 
   if (!tactic) notFound();
+
+  // Fetch Phase 7 data: subtasks and dependencies
+  const [subtasks, deps] = await Promise.all([
+    getSubtasks(id),
+    getDependencies(id),
+  ]);
 
   const isPr = tactic.source === "pr";
   const ciRollup = isPr ? computeCiRollup(tactic.ciChecks) : null;
@@ -146,6 +159,15 @@ export default async function TacticDetailPage({
                 </p>
               </div>
             )}
+
+            {/* Phase 7: Dependencies */}
+            <DependencyBadge
+              blockers={deps.blockers}
+              blocked={deps.blocked}
+            />
+
+            {/* Phase 7: Acceptance Criteria */}
+            <AcceptanceCriteriaList criteria={tactic.acceptanceCriteria} />
           </div>
 
           <div className="space-y-4 rounded-xl border border-slate-100 bg-slate-50 dark:bg-slate-800 p-5">
@@ -167,33 +189,66 @@ export default async function TacticDetailPage({
               <Row label="Risk level" value={<RiskBadge value={tactic.riskLevel} />} />
               <Row
                 label="Attempts"
-                value={`${tactic.attemptCount} / ${tactic.maxAttempts}`}
-              />
-              <Row
-                label="Human gate"
-                value={tactic.requiresHumanApproval ? "Required" : "Not required"}
-              />
-              <Row
-                label="Source"
                 value={
-                  isPr
-                    ? `Pull Request #${tactic.sourceId}`
-                    : tactic.source === "inbox"
-                    ? "Inbox interrupt"
-                    : "Simulated proposal"
+                  <AttemptBadge
+                    attemptCount={tactic.attemptCount}
+                    maxAttempts={tactic.maxAttempts}
+                  />
                 }
               />
-              {tactic.prMergeable && (
-                <Row label="PR mergeable" value={tactic.prMergeable} />
-              )}
-            </div>
-            <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+            <Row
+              label="Human gate"
+              value={tactic.requiresHumanApproval ? "Required" : "Not required"}
+            />
+            <Row
+              label="Source"
+              value={
+                isPr
+                  ? `Pull Request #${tactic.sourceId}`
+                  : tactic.source === "inbox"
+                  ? "Inbox interrupt"
+                  : "Simulated proposal"
+              }
+            />
+            {tactic.prMergeable && (
+              <Row label="PR mergeable" value={tactic.prMergeable} />
+            )}
+          </div>
+
+          {/* Phase 7: Time Tracking */}
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+            <TimeTrackingDisplay
+              estimated={tactic.estimatedMinutes}
+              actual={tactic.actualMinutes}
+            />
+          </div>
+
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
               <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">Background reviewer</p>
               <LlmReviewButton tacticId={tactic.id} />
             </div>
           </div>
         </div>
       </section>
+
+      {/* Phase 8: Escalation Notice */}
+      {tactic.attemptCount >= tactic.maxAttempts &&
+        tactic.status !== "completed" &&
+        tactic.status !== "rejected" &&
+        tactic.status !== "approved" && (
+          <EscalationNotice
+            tacticId={tactic.id}
+            attemptCount={tactic.attemptCount}
+            maxAttempts={tactic.maxAttempts}
+          />
+        )}
+
+      {/* Phase 7: Subtask List */}
+      {subtasks.length > 0 || (!isPr) ? (
+        <section className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <SubtaskList tacticId={tactic.id} subtasks={subtasks} />
+        </section>
+      ) : null}
 
       {/* Approval gate: renders for all tactic types when status is needs_review.
           For PR-tactics this provides approve/reject/comment actions (mapped to

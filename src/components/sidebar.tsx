@@ -18,6 +18,8 @@ import {
   Users,
   Menu,
   X,
+  BarChart3,
+  HelpCircle,
 } from "lucide-react";
 import { ModelSwapChip } from "@/components/model-swap-chip";
 import { ModelSwapPanel } from "@/components/model-swap-panel";
@@ -36,12 +38,14 @@ const nav = [
   { href: "/decisions", label: "Decisions", icon: Scale },
   { href: "/skills", label: "Skills", icon: Wrench },
   { href: "/priority-matrix", label: "Priority Matrix", icon: Grid2x2 },
+  { href: "/usage", label: "Usage", icon: BarChart3 },
   { href: "/strategies", label: "Strategies", icon: Target },
   { href: "/tactics", label: "Tactics", icon: ListChecks },
   { href: "/kanban", label: "Kanban", icon: LayoutGrid },
   { href: "/prs", label: "Pull Requests", icon: GitPullRequest },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/help", label: "Help", icon: HelpCircle },
 ];
 
 export function Sidebar() {

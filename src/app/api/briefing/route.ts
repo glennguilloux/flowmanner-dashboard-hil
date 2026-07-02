@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { chat } from "@/lib/llm";
+import { chat, LLM_MODEL } from "@/lib/llm";
+import { logLlmUsage } from "@/lib/usage";
 import {
   getBriefingData,
 } from "@/lib/briefing";
@@ -25,6 +26,14 @@ export async function POST() {
       ],
       { maxTokens: 8192, temperature: 0.2 },
     );
+
+    // Log LLM usage (fire-and-forget)
+    logLlmUsage({
+      model: LLM_MODEL,
+      inputTokens: usage.prompt_tokens,
+      outputTokens: usage.completion_tokens,
+      source: "briefing",
+    });
 
     return NextResponse.json({
       ok: true,

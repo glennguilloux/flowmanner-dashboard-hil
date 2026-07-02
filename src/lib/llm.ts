@@ -2,7 +2,7 @@
 // HARD RULE: this is the only LLM this app talks to. No SaaS, no fallback.
 
 const LLM_URL = process.env.LLM_URL ?? "http://localhost:11434";
-const LLM_MODEL =
+export const LLM_MODEL =
   process.env.LLM_MODEL ?? "Qwen3.6-27B-Q5_K_M-mtp.gguf";
 
 type ChatMessage = {

@@ -35,6 +35,9 @@ export async function PATCH(
     status?: string;
     confidence?: number;
     riskLevel?: string;
+    estimatedMinutes?: number | null;
+    actualMinutes?: number | null;
+    acceptanceCriteria?: string[];
   };
 
   const updates: Record<string, unknown> = {};
@@ -66,6 +69,9 @@ export async function PATCH(
   if (body.status !== undefined) updates.status = body.status;
   if (body.confidence !== undefined) updates.confidence = body.confidence;
   if (body.riskLevel !== undefined) updates.riskLevel = body.riskLevel;
+  if (body.estimatedMinutes !== undefined) updates.estimatedMinutes = body.estimatedMinutes;
+  if (body.actualMinutes !== undefined) updates.actualMinutes = body.actualMinutes;
+  if (body.acceptanceCriteria !== undefined) updates.acceptanceCriteria = body.acceptanceCriteria;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(

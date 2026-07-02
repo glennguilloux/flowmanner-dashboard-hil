@@ -4,7 +4,7 @@ import { eq, desc, sql, and } from "drizzle-orm";
 
 // ── Skill queries ──────────────────────────────────────────────────────────
 
-export async function getSkills() {
+export async function getSkills(limit = 50, offset = 0) {
   const rows = await db
     .select({
       skill: skills,
@@ -13,7 +13,9 @@ export async function getSkills() {
     .from(skills)
     .leftJoin(agentSkills, eq(agentSkills.skillId, skills.id))
     .groupBy(skills.id)
-    .orderBy(desc(skills.updatedAt));
+    .orderBy(desc(skills.updatedAt))
+    .limit(limit)
+    .offset(offset);
 
   return rows;
 }

@@ -1,8 +1,9 @@
 import { db } from "@/db";
 import { tactics, messages } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { chat } from "@/lib/llm";
+import { eq, and, gte, ne } from "drizzle-orm";
+import { chat, LLM_MODEL } from "@/lib/llm";
 import { needsGate } from "@/lib/gate";
+import { logLlmUsage } from "@/lib/usage";
 
 const SYSTEM_PROMPT = `You are a risk assessor for a software operations dashboard. You evaluate tactics (proposed actions) and score their confidence and risk level.
 
@@ -166,6 +167,15 @@ export async function scoreTactic(
       { maxTokens: 2048, temperature: 0.2 },
     );
 
+    // Log LLM usage (fire-and-forget)
+    logLlmUsage({
+      model: LLM_MODEL,
+      inputTokens: usage.prompt_tokens,
+      outputTokens: usage.completion_tokens,
+      source: "review",
+      tacticId,
+    });
+
     const result = parseReviewResponse(content);
     if (!result) {
       return {
@@ -234,4 +244,50 @@ export async function scoreTactic(
       error: `LLM call failed: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
+}
+
+/**
+ * Auto-escalate tactics where attemptCount >= maxAttempts.
+ * Sets status to needs_review, requiresHumanApproval = true, and inserts
+ * an escalation message into the tactic thread.
+ *
+ * Returns the number of tactics escalated.
+ */
+export async function escalateExhaustedTactics(): Promise<number> {
+  const exhausted = await db
+    .select({ id: tactics.id, title: tactics.title, attemptCount: tactics.attemptCount, maxAttempts: tactics.maxAttempts })
+    .from(tactics)
+    .where(
+      and(
+        gte(tactics.attemptCount, tactics.maxAttempts),
+        ne(tactics.status, "needs_review"),
+        ne(tactics.status, "completed"),
+        ne(tactics.status, "rejected"),
+        ne(tactics.status, "approved"),
+      ),
+    );
+
+  for (const tactic of exhausted) {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(tactics)
+        .set({
+          status: "needs_review",
+          requiresHumanApproval: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(tactics.id, tactic.id));
+
+      await tx.insert(messages).values({
+        parentType: "tactic",
+        parentId: tactic.id,
+        authorType: "agent",
+        authorId: "00000000-0000-0000-0000-000000000000",
+        authorName: "System (escalation)",
+        content: `Escalated: max attempts (${tactic.maxAttempts}) reached after ${tactic.attemptCount} attempts. Awaiting human review.`,
+      });
+    });
+  }
+
+  return exhausted.length;
 }
