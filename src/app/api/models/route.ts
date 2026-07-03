@@ -66,16 +66,48 @@ export async function GET() {
       );
     }
 
-    const models = (await modelsRes.json()) as DaemonModel[] | { models?: DaemonModel[] };
+    const models = (await modelsRes.json()) as
+      | DaemonModel[]
+      | { active_model?: string; models?: Record<string, Omit<DaemonModel, "id">> | DaemonModel[] };
     const status = (await statusRes.json()) as DaemonStatus;
 
-    // Handle both { models: [...] } and bare [...] response shapes.
-    const modelList = Array.isArray(models) ? models : models.models ?? [];
+    // The daemon returns `models` as a dict keyed by model id (not a list):
+    //   { active_model: "...", models: { "qwen3.6-27b-mtp": { display_name, ... } } }
+    // Normalize to a list of { id, ...fields } so the frontend can .map()/.find() it.
+    const rawModels = Array.isArray(models) ? models : (models.models ?? {});
+    const activeModelId = Array.isArray(models)
+      ? undefined
+      : models.active_model;
+
+    const modelList: DaemonModel[] = Array.isArray(rawModels)
+      ? rawModels
+      : Object.entries(rawModels).map(([id, m]) => ({
+          id,
+          ...(m as Omit<DaemonModel, "id">),
+        }));
+
+    // Ensure `active` is set on the model matching the active_model id, in case
+    // the daemon's per-model `is_active` flag is stale or absent.
+    const normalizedModelList = modelList.map((m) => ({
+      ...m,
+      active: m.active ?? (m as { is_active?: boolean }).is_active ?? m.id === activeModelId,
+    }));
+
+    // The daemon uses `active_model` / `health_status` in /status; the
+    // frontend components expect `current_model` / `healthy` (boolean).
+    const normalizedStatus: DaemonStatus = {
+      ...status,
+      current_model:
+        status.current_model ?? (status as { active_model?: string }).active_model,
+      healthy:
+        status.healthy ??
+        (status as { health_status?: string }).health_status === "healthy",
+    };
 
     return NextResponse.json({
       ok: true,
-      models: modelList,
-      status,
+      models: normalizedModelList,
+      status: normalizedStatus,
       latencyMs,
     });
   } catch (err) {
