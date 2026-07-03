@@ -1,4 +1,3 @@
-import { formatDistanceToNow } from "date-fns";
 import {
   CheckCircle2,
   XCircle,
@@ -7,6 +6,7 @@ import {
   Activity,
 } from "lucide-react";
 import type { MissionHealth } from "@/lib/missions";
+import { MissionDetailPanel } from "@/components/mission-detail-panel";
 
 type Mission = {
   id: string;
@@ -118,40 +118,14 @@ export function DashboardMissionsPanel({ missions, missionList, health }: Props)
           ✓ No active missions.
         </p>
       ) : (
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+        <div className="space-y-2">
           {missionList.map((m) => (
-            <div
+            <MissionDetailPanel
               key={m.id}
-              className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {m.title}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-mono">{m.id.slice(0, 8)}</span>
-                  {" · "}
-                  <time
-                    dateTime={new Date(m.createdAt).toISOString()}
-                    title={new Date(m.createdAt).toLocaleString()}
-                  >
-                    {formatDistanceToNow(new Date(m.createdAt), {
-                      addSuffix: true,
-                    })}
-                  </time>
-                </p>
-              </div>
-              <span
-                className={[
-                  "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize",
-                  m.status === "running"
-                    ? "bg-indigo-100 text-indigo-700"
-                    : "bg-amber-100 text-amber-700",
-                ].join(" ")}
-              >
-                {m.status}
-              </span>
-            </div>
+              missionId={m.id}
+              missionTitle={m.title}
+              missionStatus={m.status}
+            />
           ))}
         </div>
       )}

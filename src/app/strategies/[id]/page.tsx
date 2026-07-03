@@ -5,7 +5,8 @@ import { MessageThread } from "@/components/message-thread";
 import { TacticCard } from "@/components/tactic-card";
 import { SimulateProposal } from "@/components/simulate-proposal";
 import { StatusBadge } from "@/components/status-badge";
-import { ArrowLeft, Shield } from "lucide-react";
+import { ArrowLeft, Shield, Network } from "lucide-react";
+import { StrategyExportImport } from "@/components/strategy-export-import";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,17 @@ export default async function StrategyDetailPage({
             </h1>
           </div>
           <StatusBadge status={strategy.status} kind="strategy" />
+        </div>
+
+        {/* Phase 3+4: Export/Import + DAG link */}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link
+            href={`/strategies/${id}/dag`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700"
+          >
+            <Network className="h-4 w-4" /> View DAG
+          </Link>
+          <StrategyExportImport strategyId={id} />
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">

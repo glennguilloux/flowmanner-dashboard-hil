@@ -4,6 +4,7 @@ import { eq, and, gte, ne } from "drizzle-orm";
 import { chat, LLM_MODEL } from "@/lib/llm";
 import { needsGate } from "@/lib/gate";
 import { logLlmUsage } from "@/lib/usage";
+import { logTacticEvent } from "@/lib/event-journal";
 
 const SYSTEM_PROMPT = `You are a risk assessor for a software operations dashboard. You evaluate tactics (proposed actions) and score their confidence and risk level.
 
@@ -203,6 +204,27 @@ export async function scoreTactic(
       })
       .where(eq(tactics.id, tacticId));
 
+    // Phase 2: log reviewed event
+    logTacticEvent({
+      tacticId,
+      eventType: "reviewed",
+      actorType: "agent",
+      actorName: "LLM Reviewer (Qwen3-27B)",
+      detail: `Confidence: ${result.confidence}%, Risk: ${result.riskLevel}`,
+    });
+
+    // Log gated event if human gate was triggered
+    if (requiresHumanApproval) {
+      logTacticEvent({
+        tacticId,
+        eventType: "gated",
+        toStatus: "needs_review",
+        actorType: "agent",
+        actorName: "LLM Reviewer (Qwen3-27B)",
+        detail: result.uncertaintyNotes ?? "Human gate triggered",
+      });
+    }
+
     const gateNote = requiresHumanApproval
       ? " ⚠ Human gate triggered."
       : " ✓ No gate needed.";
@@ -285,6 +307,16 @@ export async function escalateExhaustedTactics(): Promise<number> {
         authorId: "00000000-0000-0000-0000-000000000000",
         authorName: "System (escalation)",
         content: `Escalated: max attempts (${tactic.maxAttempts}) reached after ${tactic.attemptCount} attempts. Awaiting human review.`,
+      });
+
+      // Phase 2: log escalated event
+      logTacticEvent({
+        tacticId: tactic.id,
+        eventType: "escalated",
+        toStatus: "needs_review",
+        actorType: "agent",
+        actorName: "System (escalation)",
+        detail: `Max attempts (${tactic.maxAttempts}) reached`,
       });
     });
   }

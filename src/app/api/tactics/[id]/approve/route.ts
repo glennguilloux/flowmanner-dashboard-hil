@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { tactics, approvals, messages } from "@/db/schema";
 import { eq, sql, and, gte } from "drizzle-orm";
+import { logTacticEvent } from "@/lib/event-journal";
 import { isUnauthorized } from "@/lib/auth";
 import { getDefaultUser } from "@/lib/data";
 import {
@@ -182,6 +183,23 @@ export async function POST(
       authorName: user.name,
       content: `${label} this tactic${body.notes ? `: ${body.notes}` : "."}`,
     });
+  });
+
+  // Phase 2: log the approval/rejection event
+  const eventType =
+    body.decision === "approve"
+      ? "approved"
+      : body.decision === "reject"
+        ? "rejected"
+        : "requested_info";
+  logTacticEvent({
+    tacticId: id,
+    eventType,
+    fromStatus: tactic.status,
+    toStatus: status,
+    actorType: "human",
+    actorName: user.name,
+    detail: body.notes ?? undefined,
   });
 
   return NextResponse.json({ ok: true, status });

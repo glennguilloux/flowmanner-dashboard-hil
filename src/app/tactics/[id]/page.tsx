@@ -11,6 +11,7 @@ import { AttemptBadge } from "@/components/attempt-badge";
 import { EscalationNotice } from "@/components/escalation-notice";
 import { ArrowLeft, AlertTriangle, Bot, Target, GitPullRequest, ExternalLink } from "lucide-react";
 import { LlmReviewButton } from "@/components/llm-review-button";
+import { EventTimeline } from "@/components/event-timeline";
 import { computeCiRollup } from "@/lib/ci";
 import { SubtaskList } from "@/components/subtask-list";
 import { DependencyBadge } from "@/components/dependency-badge";
@@ -274,6 +275,14 @@ export default async function TacticDetailPage({
           messages={tactic.messages}
           currentUser={user ?? { id: "", name: "Me" }}
         />
+      </section>
+
+      {/* Phase 2: Event Timeline */}
+      <section className="rounded-2xl border border-slate-200 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Event History
+        </h2>
+        <EventTimeline tacticId={tactic.id} />
       </section>
 
       {tactic.approvals.length > 0 && (

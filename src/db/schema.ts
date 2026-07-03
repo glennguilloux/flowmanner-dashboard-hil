@@ -417,4 +417,69 @@ export const messages = hilOps.table("messages", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+});// ═══ Phase 2: Immutable Event Journal ═══
+
+export const tacticEventType = hilOps.enum("tactic_event_type", [
+  "proposed",
+  "reviewed",
+  "gated",
+  "approved",
+  "rejected",
+  "requested_info",
+  "escalated",
+  "execution_started",
+  "completed",
+  "failed",
+  "reset",
+]);
+
+export const tacticEvents = hilOps.table(
+  "tactic_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tacticId: uuid("tactic_id")
+      .notNull()
+      .references(() => tactics.id, { onDelete: "cascade" }),
+    eventType: tacticEventType("event_type").notNull(),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status"),
+    actorType: authorType("actor_type").notNull(),
+    actorName: text("actor_name").notNull(),
+    detail: text("detail"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    tacticIdx: index("tactic_events_tactic_id_idx").on(table.tacticId),
+    tacticCreatedIdx: index("tactic_events_tactic_created_idx").on(
+      table.tacticId,
+      table.createdAt,
+    ),
+  }),
+);
+
+// ═══ Phase 7: Agent Sidecar Heartbeats ═══
+
+export const agentHeartbeats = hilOps.table(
+  "agent_heartbeats",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: text("agent_id").notNull(),
+    status: text("status").notNull(),
+    task: text("task").notNull(),
+    progress: integer("progress"),
+    logLine: text("log_line"),
+    tone: text("tone").notNull().default("neutral"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    agentCreatedIdx: index("agent_heartbeats_agent_created_idx").on(
+      table.agentId,
+      table.createdAt,
+    ),
+  }),
+);

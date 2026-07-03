@@ -15,8 +15,10 @@
     "seed": "tsx --env-file=.env.local src/db/seed.ts"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.1",
     "date-fns": "^4.4.0",
     "drizzle-orm": "0.45.2",
+    "js-yaml": "^5.2.1",
     "lucide-react": "^1.21.0",
     "next": "16.2.6",
     "pg": "8.20.0",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.17",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "22.19.15",
     "@types/pg": "8.18.0",
     "@types/react": "19.2.14",

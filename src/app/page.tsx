@@ -19,6 +19,7 @@ import { SkillsPanel } from "@/components/skills-panel";
 import { EisenhowerMatrixPanel } from "@/components/eisenhower-matrix-panel";
 import { UsagePanel } from "@/components/usage-panel";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { AgentHeartbeatPanel } from "@/components/agent-heartbeat-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,10 @@ export default async function DashboardPage() {
 
           <SectionErrorBoundary label="OpenCode">
             <OpenCodePanel />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary label="Agent Heartbeats">
+            <AgentHeartbeatPanel />
           </SectionErrorBoundary>
         </div>
       </div>

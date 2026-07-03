@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tactics, messages } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { logTacticEvent } from "@/lib/event-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,15 @@ export async function POST(
       authorName: "System",
       content: `Attempt counter reset from ${tactic.attemptCount}/${tactic.maxAttempts} to 0. Tactic can be retried.`,
     });
+  });
+
+  // Phase 2: log reset event
+  logTacticEvent({
+    tacticId: id,
+    eventType: "reset",
+    actorType: "human",
+    actorName: "System",
+    detail: `Attempt counter reset from ${tactic.attemptCount}/${tactic.maxAttempts} to 0`,
   });
 
   return NextResponse.json({ ok: true });
