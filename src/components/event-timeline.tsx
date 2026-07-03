@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   CheckCircle2,
@@ -53,13 +53,35 @@ const EVENT_CONFIG: Record<
 export function EventTimeline({ tacticId }: Props) {
   const [events, setEvents] = useState<TacticEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
+  const fetchEvents = useRef(() => {
     fetch(`/api/tactics/${tacticId}/events`)
       .then((r) => r.json())
       .then((data) => setEvents(data.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
+  });
+
+  useEffect(() => {
+    fetchEvents.current();
+
+    // Poll every 10s so same-page actions (approve/reject/reset) show up
+    // without requiring a full page reload.
+    intervalRef.current = setInterval(fetchEvents.current, 10_000);
+
+    // Also refetch when the tab regains focus.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchEvents.current();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [tacticId]);
 
   if (loading) {

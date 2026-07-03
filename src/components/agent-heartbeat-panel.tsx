@@ -58,7 +58,23 @@ export function AgentHeartbeatPanel() {
   }
 
   if (heartbeats.length === 0) {
-    return null;
+    return (
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:bg-slate-900">
+        <div className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-indigo-600" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Agent Status
+          </h2>
+        </div>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+          No agents are reporting heartbeats. Agents post a heartbeat via
+          <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs dark:bg-slate-800">
+            POST /api/agent/ping
+          </code>
+          every 30&nbsp;s.
+        </p>
+      </section>
+    );
   }
 
   return (
